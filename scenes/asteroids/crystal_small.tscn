@@ -1,0 +1,18 @@
+[gd_scene format=3 uid="uid://b0xrqgmi133g6"]
+
+[ext_resource type="Script" path="res://scripts/asteroids/asteroid_crystal.gd" id="1_cry"]
+[ext_resource type="Resource" uid="uid://crystal_small_def" path="res://resources/asteroids/crystal_small.tres" id="2_def"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_cry_s"]
+radius = 22.0
+
+[node name="CrystalSmall" type="Area2D"]
+collision_layer = 2
+collision_mask = 0
+script = ExtResource("1_cry")
+definition = ExtResource("2_def")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("CircleShape2D_cry_s")
+
+[node name="Sprite2D" type="Sprite2D" parent="."]

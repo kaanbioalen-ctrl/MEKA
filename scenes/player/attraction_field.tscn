@@ -1,0 +1,15 @@
+[gd_scene format=3 uid="uid://ttr1eld001"]
+
+[ext_resource type="Script" path="res://scripts/player/mining_field.gd" id="1_attract"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_attract"]
+radius = 160.0
+
+[node name="AttractionField" type="Area2D"]
+collision_layer = 4
+collision_mask = 2
+script = ExtResource("1_attract")
+attract_acceleration = 400.2
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("CircleShape2D_attract")

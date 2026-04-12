@@ -1,0 +1,20 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/enemies/worm_enemy.gd" id="1_jp1g2"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_worm"]
+radius = 14.0
+
+[sub_resource type="CanvasItemMaterial" id="CanvasItemMaterial_worm"]
+blend_mode = 1
+
+[node name="WormEnemy" type="Area2D"]
+collision_layer = 2
+collision_mask = 2
+script = ExtResource("1_jp1g2")
+material = SubResource("CanvasItemMaterial_worm")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("CircleShape2D_worm")
+
+[connection signal="area_entered" from="." to="." method="_on_area_entered"]

@@ -1,0 +1,16 @@
+[gd_scene format=3 uid="uid://iron_devasa_boss"]
+
+[ext_resource type="Script" path="res://scripts/asteroids/iron_asteroid_devasa.gd" id="1_iron_dev"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_dev"]
+radius = 60.0
+
+[node name="IronAsteroidDevasa" type="Area2D"]
+collision_layer = 2
+collision_mask = 0
+script = ExtResource("1_iron_dev")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("CircleShape2D_dev")
+
+[node name="Sprite2D" type="Sprite2D" parent="."]

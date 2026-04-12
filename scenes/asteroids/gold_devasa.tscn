@@ -1,0 +1,18 @@
+[gd_scene load_steps=4 format=3 uid="uid://gold_devasa_boss"]
+
+[ext_resource type="Script" path="res://scripts/asteroids/asteroid_gold_devasa.gd" id="1_gold_dev"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_dev"]
+radius = 60.0
+
+[sub_resource type="CanvasItemMaterial" id="CanvasItemMaterial_dev"]
+blend_mode = 1
+
+[node name="AsteroidGoldDevasa" type="Area2D"]
+collision_layer = 2
+collision_mask = 0
+material = SubResource("CanvasItemMaterial_dev")
+script = ExtResource("1_gold_dev")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("CircleShape2D_dev")

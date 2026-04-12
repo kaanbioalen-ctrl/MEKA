@@ -1,0 +1,117 @@
+[gd_scene load_steps=11 format=3]
+
+[ext_resource type="Script" path="res://scripts/player/player.gd" id="1_ym5k2"]
+[ext_resource type="Script" path="res://scripts/player/neon_orb_layer.gd" id="2_3bnls"]
+[ext_resource type="Script" path="res://scripts/player/damage_aura_visual.gd" id="3_2s0jt"]
+[ext_resource type="PackedScene" path="res://scenes/player/attraction_field.tscn" id="4_attract"]
+[ext_resource type="Script" path="res://scripts/player/orbit_controller.gd" id="5_orbit"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_h3jj5"]
+radius = 12.0
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_contact"]
+radius = 12.0
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_aura"]
+radius = 100.0
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_orbit"]
+radius = 70.0
+
+[sub_resource type="CanvasItemMaterial" id="CanvasItemMaterial_nsh8h"]
+blend_mode = 1
+
+[node name="Player" type="CharacterBody2D"]
+script = ExtResource("1_ym5k2")
+groups = ["Player", "player"]
+
+[node name="VisualRoot" type="Node2D" parent="."]
+
+[node name="OuterGlow" type="Node2D" parent="VisualRoot"]
+material = SubResource("CanvasItemMaterial_nsh8h")
+script = ExtResource("2_3bnls")
+layer_color = Color(0.9725, 0.9922, 1, 1)
+base_radius = 26.0
+alpha = 0.28
+pulse_amount = 6.4
+pulse_speed = 0.9
+
+[node name="MidGlow" type="Node2D" parent="VisualRoot"]
+material = SubResource("CanvasItemMaterial_nsh8h")
+script = ExtResource("2_3bnls")
+layer_color = Color(0.9412, 0.9725, 1, 1)
+base_radius = 16.0
+alpha = 0.50
+pulse_amount = 3.2
+pulse_speed = 1.3
+
+[node name="Core" type="Node2D" parent="VisualRoot"]
+material = SubResource("CanvasItemMaterial_nsh8h")
+script = ExtResource("2_3bnls")
+layer_color = Color(1, 1, 1, 1)
+base_radius = 10.0
+alpha = 1.0
+pulse_amount = 1.0
+pulse_speed = 2.0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("CircleShape2D_h3jj5")
+
+[node name="ContactDetector" type="Area2D" parent="."]
+collision_layer = 0
+collision_mask = 2147483647
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="ContactDetector"]
+shape = SubResource("CircleShape2D_contact")
+
+[node name="DamageAura" type="Area2D" parent="."]
+collision_layer = 4
+collision_mask = 2
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="DamageAura"]
+shape = SubResource("CircleShape2D_aura")
+
+[node name="AuraRing" type="Node2D" parent="."]
+script = ExtResource("3_2s0jt")
+radius = 100.0
+ring_color = Color(0.9176, 0.9647, 1, 0.006)
+ring_width = 1.4
+draw_fill = true
+fill_opacity = 0.0025
+
+[node name="EnergyFieldRing" type="Node2D" parent="."]
+script = ExtResource("3_2s0jt")
+radius = 8.0
+ring_color = Color(1, 0.9843, 0.9176, 0.016)
+ring_width = 1.6
+draw_fill = false
+dashed = true
+dash_count = 44
+dash_fill_ratio = 0.58
+
+[node name="AttractionField" parent="." instance=ExtResource("4_attract")]
+
+[node name="OrbitController" type="Node2D" parent="."]
+script = ExtResource("5_orbit")
+max_orbit_count = 6
+orbit_radius = 88.0
+
+[node name="OrbitCollector" type="Area2D" parent="OrbitController"]
+collision_layer = 0
+collision_mask = 2
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="OrbitController/OrbitCollector"]
+shape = SubResource("CircleShape2D_orbit")
+
+[node name="DamageTick" type="Timer" parent="."]
+wait_time = 2.0
+autostart = true
+
+[node name="Camera2D" type="Camera2D" parent="."]
+position_smoothing_enabled = true
+position_smoothing_speed = 8.0
+current = true
+
+[connection signal="area_entered" from="ContactDetector" to="." method="_on_contact_detector_area_entered"]
+[connection signal="body_entered" from="ContactDetector" to="." method="_on_contact_detector_body_entered"]
+[connection signal="timeout" from="DamageTick" to="." method="_on_damage_tick_timeout"]

@@ -1,0 +1,359 @@
+[gd_scene format=3 uid="uid://world2_crystal"]
+
+[ext_resource type="Shader"       path="res://shaders/milky_way_bg.gdshader"                    id="0_milky"]
+[ext_resource type="Script"       path="res://scripts/world/milky_way_bg.gd"                    id="0_milkyscript"]
+[ext_resource type="Script"       path="res://scripts/world/world.gd"                           id="1_5u4yx"]
+[ext_resource type="Script"       path="res://scripts/world/zone_manager.gd"                    id="2_eg1aj"]
+[ext_resource type="PackedScene"  path="res://scenes/player/player.tscn"                        id="3_2kajk"]
+[ext_resource type="Script"       path="res://scripts/ui/energy_hud.gd"                         id="4_8x6rw"]
+[ext_resource type="Script"       path="res://scripts/enemies/crystal_asteroid_spawner.gd"      id="5_cryst"]
+[ext_resource type="PackedScene"  path="res://scenes/asteroids/crystal_small.tscn"              id="6_cry_scene"]
+[ext_resource type="Resource"     path="res://resources/asteroids/crystal_small.tres"           id="6_small"]
+[ext_resource type="Resource"     path="res://resources/asteroids/crystal_medium.tres"          id="6_medium"]
+[ext_resource type="Resource"     path="res://resources/asteroids/crystal_large.tres"           id="6_large"]
+[ext_resource type="Script"       path="res://scripts/ui/upgrade_screen.gd"                     id="7_2n2d0"]
+[ext_resource type="Script"       path="res://scripts/enemies/worm_spawner.gd"                  id="9_a8d2w"]
+[ext_resource type="PackedScene"  path="res://scenes/enemies/worm_enemy.tscn"                   id="10_l4v0u"]
+[ext_resource type="Script"       path="res://scripts/world/space_background.gd"                id="14_spacebg"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_milky"]
+shader = ExtResource("0_milky")
+shader_parameter/camera_pos = Vector2(0, 0)
+
+[node name="World" type="Node2D"]
+script = ExtResource("1_5u4yx")
+
+[node name="CrystalSpaceLayer" type="CanvasLayer" parent="."]
+layer = -2
+
+[node name="CrystalBaseBg" type="ColorRect" parent="CrystalSpaceLayer"]
+offset_right = 1920.0
+offset_bottom = 1080.0
+color = Color(0.012, 0.018, 0.055, 1.0)
+
+[node name="MilkyWayLayer" type="CanvasLayer" parent="."]
+layer = -1
+
+[node name="MilkyWayBg" type="ColorRect" parent="MilkyWayLayer"]
+offset_right = 1920.0
+offset_bottom = 1080.0
+material = SubResource("ShaderMaterial_milky")
+modulate = Color(0.28, 0.62, 1.0, 0.45)
+script = ExtResource("0_milkyscript")
+
+[node name="SpaceBackground" type="Node2D" parent="MilkyWayLayer"]
+script = ExtResource("14_spacebg")
+
+[node name="ZoneManager" type="Node" parent="."]
+script = ExtResource("2_eg1aj")
+
+[node name="Player" parent="." instance=ExtResource("3_2kajk")]
+position = Vector2(960, 540)
+
+[node name="AsteroidSpawner" type="Node2D" parent="."]
+script = ExtResource("5_cryst")
+crystal_asteroid_scene    = ExtResource("6_cry_scene")
+small_crystal_definition  = ExtResource("6_small")
+medium_crystal_definition = ExtResource("6_medium")
+large_crystal_definition  = ExtResource("6_large")
+
+[node name="WormSpawner" type="Node2D" parent="."]
+script = ExtResource("9_a8d2w")
+worm_scene = ExtResource("10_l4v0u")
+
+[node name="HUD" type="CanvasLayer" parent="."]
+script = ExtResource("4_8x6rw")
+
+[node name="EnergyBarFrame" type="ColorRect" parent="HUD"]
+offset_left = 760.0
+offset_top = 1006.0
+offset_right = 1160.0
+offset_bottom = 1050.0
+color = Color(0.02, 0.04, 0.12, 0.88)
+
+[node name="EnergyBarFill" type="ColorRect" parent="HUD/EnergyBarFrame"]
+offset_right = 400.0
+offset_bottom = 44.0
+color = Color(0.22, 0.72, 1.0, 0.95)
+
+[node name="EnergyBarText" type="Label" parent="HUD/EnergyBarFrame"]
+offset_right = 400.0
+offset_bottom = 44.0
+theme_override_colors/font_color = Color(0.82, 0.96, 1.0, 1)
+theme_override_font_sizes/font_size = 24
+text = "100%"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="IronLabel" type="Label" parent="HUD"]
+offset_left = 20.0
+offset_top = 20.0
+offset_right = 320.0
+offset_bottom = 58.0
+theme_override_colors/font_color = Color(0.92, 0.94, 0.98, 1)
+theme_override_font_sizes/font_size = 24
+text = "DEMIR: 0"
+
+[node name="GoldLabel" type="Label" parent="HUD"]
+offset_left = 20.0
+offset_top = 54.0
+offset_right = 320.0
+offset_bottom = 92.0
+theme_override_colors/font_color = Color(1, 0.88, 0.30, 1)
+theme_override_font_sizes/font_size = 24
+text = "ALTIN: 0"
+
+[node name="CrystalLabel" type="Label" parent="HUD"]
+offset_left = 20.0
+offset_top = 88.0
+offset_right = 360.0
+offset_bottom = 126.0
+theme_override_colors/font_color = Color(0.5, 0.92, 1.0, 1)
+theme_override_font_sizes/font_size = 24
+text = "KRISTAL: 0"
+
+[node name="MultiplierLabel" type="Label" parent="HUD"]
+offset_left = 20.0
+offset_top = 156.0
+offset_right = 360.0
+offset_bottom = 194.0
+theme_override_colors/font_color = Color(0.55, 0.88, 1.0, 1)
+theme_override_font_sizes/font_size = 24
+text = "MULTIPLIER: x1.00"
+
+[node name="TimeLabel" type="Label" parent="HUD"]
+offset_left = 20.0
+offset_top = 190.0
+offset_right = 260.0
+offset_bottom = 228.0
+theme_override_colors/font_color = Color(0.75, 0.94, 1.0, 1)
+theme_override_font_sizes/font_size = 24
+text = "TIME: 00:00"
+
+[node name="ZoneLabel" type="Label" parent="HUD"]
+offset_left = 20.0
+offset_top = 224.0
+offset_right = 360.0
+offset_bottom = 262.0
+theme_override_colors/font_color = Color(0.65, 0.90, 1.0, 1)
+theme_override_font_sizes/font_size = 24
+text = "ZONE: --"
+
+[node name="SpeedLabel" type="Label" parent="HUD"]
+offset_left = 20.0
+offset_top = 258.0
+offset_right = 320.0
+offset_bottom = 296.0
+theme_override_colors/font_color = Color(0.60, 0.88, 1.0, 1)
+theme_override_font_sizes/font_size = 24
+text = "SPEED: 0"
+
+[node name="PlayerKonumuLabel" type="Label" parent="HUD"]
+offset_left = 20.0
+offset_top = 292.0
+offset_right = 520.0
+offset_bottom = 354.0
+theme_override_colors/font_color = Color(0.70, 0.90, 1.0, 1)
+theme_override_font_sizes/font_size = 22
+text = "PLAYER KONUMU: (0, 0)"
+
+[node name="PlayerLabel" type="Label" parent="HUD"]
+offset_left = 20.0
+offset_top = 326.0
+offset_right = 520.0
+offset_bottom = 388.0
+theme_override_colors/font_color = Color(0.65, 0.88, 1.0, 1)
+theme_override_font_sizes/font_size = 22
+text = "PLAYER: (0, 0)"
+
+[node name="AttractionRadiusLabel" type="Label" parent="HUD"]
+offset_left = 20.0
+offset_top = 362.0
+offset_right = 400.0
+offset_bottom = 400.0
+theme_override_colors/font_color = Color(0.45, 0.80, 1.0, 1)
+theme_override_font_sizes/font_size = 22
+text = "CEKIM R: --"
+
+[node name="EnergyFieldRadiusLabel" type="Label" parent="HUD"]
+offset_left = 20.0
+offset_top = 396.0
+offset_right = 400.0
+offset_bottom = 434.0
+theme_override_colors/font_color = Color(0.50, 0.85, 1.0, 1)
+theme_override_font_sizes/font_size = 22
+text = "ENERJI R: --"
+
+[node name="DamageRadiusLabel" type="Label" parent="HUD"]
+offset_left = 20.0
+offset_top = 430.0
+offset_right = 400.0
+offset_bottom = 468.0
+theme_override_colors/font_color = Color(0.35, 0.72, 1.0, 1)
+theme_override_font_sizes/font_size = 22
+text = "HASAR R: --"
+
+[node name="MinimapFrame" type="ColorRect" parent="HUD"]
+offset_left = 24.0
+offset_top = 920.0
+offset_right = 224.0
+offset_bottom = 1056.0
+color = Color(0.02, 0.04, 0.12, 0.85)
+
+[node name="MinimapBorder" type="ColorRect" parent="HUD/MinimapFrame"]
+offset_right = 200.0
+offset_bottom = 136.0
+color = Color(0.08, 0.18, 0.35, 0.22)
+
+[node name="MinimapTitle" type="Label" parent="HUD/MinimapFrame"]
+offset_left = 8.0
+offset_top = 4.0
+offset_right = 160.0
+offset_bottom = 24.0
+theme_override_colors/font_color = Color(0.55, 0.92, 1.0, 1)
+theme_override_font_sizes/font_size = 14
+text = "MAP"
+
+[node name="StormMarker" type="ColorRect" parent="HUD/MinimapFrame"]
+visible = false
+offset_left = 94.0
+offset_top = 62.0
+offset_right = 106.0
+offset_bottom = 74.0
+color = Color(0.30, 0.68, 1.0, 1)
+
+[node name="PlayerGlow" type="ColorRect" parent="HUD/MinimapFrame"]
+visible = false
+offset_left = 90.0
+offset_top = 58.0
+offset_right = 110.0
+offset_bottom = 78.0
+color = Color(0.35, 0.75, 1.0, 0.45)
+
+[node name="PlayerMarker" type="ColorRect" parent="HUD/MinimapFrame"]
+visible = false
+offset_left = 95.0
+offset_top = 63.0
+offset_right = 105.0
+offset_bottom = 73.0
+color = Color(0.62, 0.94, 1.0, 1)
+
+[node name="PortalMarker" type="ColorRect" parent="HUD/MinimapFrame"]
+visible = false
+offset_left = 94.0
+offset_top = 62.0
+offset_right = 106.0
+offset_bottom = 74.0
+color = Color(0.50, 0.88, 1.0, 1.0)
+
+[node name="MainMenu" type="CanvasLayer" parent="."]
+process_mode = 3
+
+[node name="Overlay" type="ColorRect" parent="MainMenu"]
+offset_right = 1920.0
+offset_bottom = 1080.0
+color = Color(0.01, 0.02, 0.08, 0.82)
+
+[node name="CenterBox" type="VBoxContainer" parent="MainMenu"]
+offset_left = 760.0
+offset_top = 360.0
+offset_right = 1160.0
+offset_bottom = 720.0
+theme_override_constants/separation = 18
+alignment = 1
+
+[node name="Title" type="Label" parent="MainMenu/CenterBox"]
+custom_minimum_size = Vector2(0, 72)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.55, 0.92, 1.0, 1)
+theme_override_font_sizes/font_size = 46
+text = "CRYSTAL ZONE"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="ContinueButton" type="Button" parent="MainMenu/CenterBox"]
+custom_minimum_size = Vector2(0, 64)
+layout_mode = 2
+theme_override_font_sizes/font_size = 30
+text = "Devam Et"
+disabled = true
+
+[node name="NewGameButton" type="Button" parent="MainMenu/CenterBox"]
+custom_minimum_size = Vector2(0, 64)
+layout_mode = 2
+theme_override_font_sizes/font_size = 30
+text = "Yeni Oyun"
+
+[node name="SettingsButton" type="Button" parent="MainMenu/CenterBox"]
+custom_minimum_size = Vector2(0, 64)
+layout_mode = 2
+theme_override_font_sizes/font_size = 30
+text = "Settings"
+
+[node name="QuitButton" type="Button" parent="MainMenu/CenterBox"]
+custom_minimum_size = Vector2(0, 64)
+layout_mode = 2
+theme_override_font_sizes/font_size = 30
+text = "Cik"
+
+[node name="SettingsHint" type="Label" parent="MainMenu/CenterBox"]
+visible = false
+custom_minimum_size = Vector2(0, 52)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.55, 0.88, 1.0, 1)
+theme_override_font_sizes/font_size = 20
+text = "Settings yakinda."
+horizontal_alignment = 1
+
+[node name="DeathScreen" type="CanvasLayer" parent="."]
+visible = false
+
+[node name="Overlay" type="ColorRect" parent="DeathScreen"]
+offset_right = 1920.0
+offset_bottom = 1080.0
+color = Color(0, 0, 0, 0.75)
+
+[node name="CenterPanel" type="PanelContainer" parent="DeathScreen"]
+offset_left = 760.0
+offset_top = 330.0
+offset_right = 1160.0
+offset_bottom = 750.0
+
+[node name="VBox" type="VBoxContainer" parent="DeathScreen/CenterPanel"]
+layout_mode = 2
+theme_override_constants/separation = 22
+
+[node name="DeathLabel" type="Label" parent="DeathScreen/CenterPanel/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.55, 0.92, 1.0, 1)
+theme_override_font_sizes/font_size = 54
+text = "OLDUN"
+horizontal_alignment = 1
+
+[node name="RetryButton" type="Button" parent="DeathScreen/CenterPanel/VBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 32
+text = "Tekrar Dene"
+
+[node name="UpgradeButton" type="Button" parent="DeathScreen/CenterPanel/VBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 28
+text = "Yetenekler"
+
+[node name="QuitButton" type="Button" parent="DeathScreen/CenterPanel/VBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 28
+text = "Cik"
+
+[node name="UpgradeScreen" type="CanvasLayer" parent="."]
+visible = false
+script = ExtResource("7_2n2d0")
+
+[connection signal="pressed" from="DeathScreen/CenterPanel/VBox/RetryButton" to="." method="_on_retry_button_pressed"]
+[connection signal="pressed" from="DeathScreen/CenterPanel/VBox/UpgradeButton" to="." method="_on_upgrade_button_pressed"]
+[connection signal="pressed" from="DeathScreen/CenterPanel/VBox/QuitButton" to="." method="_on_death_screen_quit_pressed"]
+[connection signal="pressed" from="MainMenu/CenterBox/ContinueButton" to="." method="_on_main_menu_continue_pressed"]
+[connection signal="pressed" from="MainMenu/CenterBox/NewGameButton" to="." method="_on_main_menu_new_game_pressed"]
+[connection signal="pressed" from="MainMenu/CenterBox/SettingsButton" to="." method="_on_main_menu_settings_pressed"]
+[connection signal="pressed" from="MainMenu/CenterBox/QuitButton" to="." method="_on_main_menu_quit_pressed"]
+[connection signal="close_requested" from="UpgradeScreen" to="." method="_on_upgrade_screen_close_requested"]

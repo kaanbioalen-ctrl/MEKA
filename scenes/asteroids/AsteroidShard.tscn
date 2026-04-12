@@ -1,0 +1,6 @@
+[gd_scene format=3 uid="uid://w5b861rg0wu2"]
+
+[ext_resource type="Script" path="res://scripts/asteroids/asteroid_shard.gd" id="1_shard"]
+
+[node name="AsteroidShard" type="Node2D" unique_id=346272346]
+script = ExtResource("1_shard")

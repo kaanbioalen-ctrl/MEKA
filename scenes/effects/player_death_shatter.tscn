@@ -1,0 +1,11 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/effects/player_death_shatter.gd" id="1_3r85j"]
+
+[sub_resource type="CanvasItemMaterial" id="CanvasItemMaterial_5fbt7"]
+blend_mode = 1
+
+[node name="PlayerDeathShatter" type="Node2D"]
+material = SubResource("CanvasItemMaterial_5fbt7")
+script = ExtResource("1_3r85j")
+

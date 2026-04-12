@@ -1,0 +1,35 @@
+[gd_resource type="Resource" script_class="AsteroidDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/asteroids/asteroid_definition.gd" id="1_def"]
+
+[resource]
+script = ExtResource("1_def")
+definition_id = &"asteroid_gold_devasa"
+display_name = "Devasa Gold Asteroid"
+max_hp = 4000.0
+radius = 138.0
+speed = 8.0
+drift_variation = 0.018
+drift_frequency = 0.26
+drift_response = 0.50
+rotation_speed = 0.038
+magnetic_influence = 0.06
+magnetic_resistance = 5.5
+min_pull = 3.5
+velocity_blend = 0.60
+side_damping = 0.98
+pickup_commit_distance = 100.0
+orbital_offset_motion = 10.0
+orbital_frequency = 0.25
+resonance_pulse_motion = 0.0
+resonance_frequency = 0.0
+energy_drop_count = 80
+energy_orb_drop_count = 50
+orb_resource_kind = &"gold"
+orb_value = 8
+glow_color = Color(1.0, 0.50, 0.02, 1)
+mid_color = Color(1.0, 0.70, 0.08, 1)
+core_color = Color(1.0, 0.91, 0.40, 1)
+death_core_color = Color(1.0, 0.84, 0.28, 1)
+death_burst_color = Color(1.0, 0.50, 0.02, 1)
+death_arc_color = Color(1.0, 0.97, 0.62, 1)

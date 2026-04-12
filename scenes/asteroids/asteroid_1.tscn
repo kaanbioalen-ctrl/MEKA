@@ -1,0 +1,20 @@
+[gd_scene load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://scripts/asteroids/asteroid_base.gd" id="1_gh3pr"]
+[ext_resource type="Resource" path="res://resources/asteroids/iron_medium.tres" id="2_med"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_83gpa"]
+radius = 24.0
+
+[sub_resource type="CanvasItemMaterial" id="CanvasItemMaterial_jw6bn"]
+blend_mode = 1
+
+[node name="Asteroid1" type="Area2D"]
+script = ExtResource("1_gh3pr")
+definition = ExtResource("2_med")
+collision_layer = 2
+collision_mask = 0
+material = SubResource("CanvasItemMaterial_jw6bn")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("CircleShape2D_83gpa")

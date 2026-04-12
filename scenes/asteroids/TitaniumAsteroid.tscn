@@ -1,0 +1,18 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/asteroids/titanium_asteroid.gd" id="1_titanium"]
+[ext_resource type="Resource" path="res://resources/asteroids/titanium_medium.tres" id="2_titanium_def"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_titanium"]
+radius = 24.0
+
+[node name="TitaniumAsteroid" type="Area2D"]
+collision_layer = 2
+collision_mask = 0
+script = ExtResource("1_titanium")
+definition = ExtResource("2_titanium_def")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("CircleShape2D_titanium")
+
+[node name="Sprite2D" type="Sprite2D" parent="."]

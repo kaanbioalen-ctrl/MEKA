@@ -1,0 +1,34 @@
+[gd_resource type="Resource" script_class="AsteroidDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/asteroids/asteroid_definition.gd" id="1_def"]
+
+[resource]
+script = ExtResource("1_def")
+definition_id = &"asteroid_titanium_medium"
+display_name = "Titanium Asteroid"
+max_hp = 12.0
+radius = 34.0
+speed = 34.0
+drift_variation = 0.035
+drift_frequency = 0.42
+drift_response = 0.72
+rotation_speed = 0.16
+magnetic_influence = 0.85
+magnetic_resistance = 1.35
+min_pull = 15.0
+velocity_blend = 1.3
+side_damping = 0.92
+pickup_commit_distance = 58.0
+orbital_offset_motion = 0.0
+orbital_frequency = 0.0
+resonance_pulse_motion = 0.0
+resonance_frequency = 0.0
+energy_drop_count = 3
+orb_resource_kind = &"titanium"
+orb_value = 2
+glow_color = Color(0.66, 0.80, 0.92, 1)
+mid_color = Color(0.54, 0.68, 0.82, 1)
+core_color = Color(0.82, 0.90, 0.98, 1)
+death_core_color = Color(0.82, 0.95, 1, 1)
+death_burst_color = Color(0.42, 0.66, 0.88, 1)
+death_arc_color = Color(0.92, 0.99, 1, 1)

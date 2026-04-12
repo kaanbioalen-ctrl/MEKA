@@ -1,0 +1,33 @@
+[gd_resource type="Resource" script_class="AsteroidDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/asteroids/asteroid_definition.gd" id="1_def"]
+
+[resource]
+script = ExtResource("1_def")
+definition_id = &"asteroid_iron_medium"
+display_name = "Medium Iron Asteroid"
+max_hp = 11.0
+radius = 34.0
+speed = 36.0
+drift_variation = 0.04
+drift_frequency = 0.45
+drift_response = 0.75
+rotation_speed = 0.15
+magnetic_influence = 1.0
+magnetic_resistance = 1.0
+min_pull = 14.0
+velocity_blend = 1.4
+side_damping = 0.85
+pickup_commit_distance = 56.0
+orbital_offset_motion = 0.0
+orbital_frequency = 0.0
+resonance_pulse_motion = 0.0
+resonance_frequency = 0.0
+energy_drop_count = 7
+orb_resource_kind = &"iron"
+glow_color = Color(0.72, 0.78, 0.84, 1)
+mid_color = Color(0.6, 0.66, 0.74, 1)
+core_color = Color(0.82, 0.86, 0.92, 1)
+death_core_color = Color(0.78, 0.84, 0.9, 1)
+death_burst_color = Color(0.58, 0.64, 0.72, 1)
+death_arc_color = Color(0.92, 0.96, 1, 1)
