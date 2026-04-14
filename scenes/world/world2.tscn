@@ -11,6 +11,8 @@
 [ext_resource type="Resource"     path="res://resources/asteroids/crystal_small.tres"           id="6_small"]
 [ext_resource type="Resource"     path="res://resources/asteroids/crystal_medium.tres"          id="6_medium"]
 [ext_resource type="Resource"     path="res://resources/asteroids/crystal_large.tres"           id="6_large"]
+[ext_resource type="PackedScene"  path="res://scenes/asteroids/TitaniumAsteroid.tscn"           id="6_titanium_scene"]
+[ext_resource type="Resource"     path="res://resources/asteroids/titanium_medium.tres"         id="6_titanium_def"]
 [ext_resource type="Script"       path="res://scripts/ui/upgrade_screen.gd"                     id="7_2n2d0"]
 [ext_resource type="Script"       path="res://scripts/enemies/worm_spawner.gd"                  id="9_a8d2w"]
 [ext_resource type="PackedScene"  path="res://scenes/enemies/worm_enemy.tscn"                   id="10_l4v0u"]
@@ -56,6 +58,8 @@ crystal_asteroid_scene    = ExtResource("6_cry_scene")
 small_crystal_definition  = ExtResource("6_small")
 medium_crystal_definition = ExtResource("6_medium")
 large_crystal_definition  = ExtResource("6_large")
+titanium_asteroid_scene   = ExtResource("6_titanium_scene")
+titanium_definition       = ExtResource("6_titanium_def")
 
 [node name="WormSpawner" type="Node2D" parent="."]
 script = ExtResource("9_a8d2w")
@@ -110,7 +114,7 @@ offset_right = 360.0
 offset_bottom = 126.0
 theme_override_colors/font_color = Color(0.5, 0.92, 1.0, 1)
 theme_override_font_sizes/font_size = 24
-text = "KRISTAL: 0"
+text = "ELMAS: 0"
 
 [node name="MultiplierLabel" type="Label" parent="HUD"]
 offset_left = 20.0

@@ -37,6 +37,17 @@ var blackhole_event_horizon_level: int = 0
 var blackhole_accretion_level: int = 0
 var blackhole_singularity_drive_level: int = 0
 
+# ── Silah kilitleri (perk ile kazanılır, run sonu sıfırlanır) ──────────────────
+var laser_unlocked: bool = false
+var bullet_unlocked: bool = false
+var rocket_unlocked: bool = false
+var laser_upgrade_level: int = 0
+var laser_duration_upgrade_level: int = 0
+var dual_laser_upgrade_level: int = 0
+var bullet_bounce_upgrade_level: int = 0
+var bullet_damage_upgrade_level: int = 0
+var rocket_upgrade_level: int = 0
+
 
 func _process(delta: float) -> void:
 	if active:
@@ -78,6 +89,15 @@ func reset_run() -> void:
 	blackhole_event_horizon_level = 0
 	blackhole_accretion_level = 0
 	blackhole_singularity_drive_level = 0
+	laser_unlocked = false
+	bullet_unlocked = false
+	rocket_unlocked = false
+	laser_upgrade_level = 0
+	laser_duration_upgrade_level = 0
+	dual_laser_upgrade_level = 0
+	bullet_bounce_upgrade_level = 0
+	bullet_damage_upgrade_level = 0
+	rocket_upgrade_level = 0
 
 
 func set_current_zone(zone_id: int, zone_grid: Vector2i) -> void:

@@ -28,6 +28,9 @@ extends CanvasLayer
 var _player: Node = null
 var _energy_fx_time: float = 0.0
 var _attract_lbl: Label = null
+var _minimap_titanium_markers: Array[ColorRect] = []
+var _minimap_sulfur_markers: Array[ColorRect] = []
+var _minimap_wind_markers: Array[ColorRect] = []
 
 const RESOURCE_LABEL_FONT_SIZE: int = 15
 const RESOURCE_LABEL_OUTLINE_SIZE: int = 2
@@ -235,6 +238,9 @@ func _update_text() -> void:
 	_update_storm_minimap()
 	_update_player_minimap()
 	_update_portal_minimap()
+	_update_titanium_minimap()
+	_update_sulfur_minimap()
+	_update_wind_minimap()
 
 
 func _update_energy_text() -> void:
@@ -334,9 +340,9 @@ func _update_crystal_text() -> void:
 	if crystal_label == null:
 		return
 	if _player == null:
-		crystal_label.text = "KRISTAL: --"
+		crystal_label.text = "ELMAS: --"
 		return
-	crystal_label.text = "KRISTAL: %d" % int(_player.get("crystal"))
+	crystal_label.text = "ELMAS: %d" % int(_player.get("crystal"))
 
 
 func _update_uranium_text() -> void:
@@ -603,3 +609,215 @@ func _update_portal_minimap() -> void:
 	var portal_pulse := 0.55 + (0.45 * sin(_energy_fx_time * 4.0))
 	minimap_portal_marker.modulate = Color(0.55, 0.92, 1.0, portal_pulse)
 	minimap_portal_marker.visible = true
+
+
+func _update_titanium_minimap() -> void:
+	if minimap_frame == null:
+		return
+
+	var tree := get_tree()
+	if tree == null:
+		_hide_titanium_minimap_markers()
+		return
+	var titanium_nodes: Array = tree.get_nodes_in_group("asteroid_titanium")
+	if titanium_nodes.is_empty():
+		_hide_titanium_minimap_markers()
+		return
+
+	var world: Node = get_parent()
+	if world == null:
+		_hide_titanium_minimap_markers()
+		return
+	var zone_manager: Node = world.get_node_or_null("ZoneManager")
+	if zone_manager == null:
+		_hide_titanium_minimap_markers()
+		return
+
+	var world_size_variant: Variant = zone_manager.get("world_size")
+	if not (world_size_variant is Vector2):
+		_hide_titanium_minimap_markers()
+		return
+	var world_size: Vector2 = world_size_variant
+	if world_size.x <= 0.0 or world_size.y <= 0.0:
+		_hide_titanium_minimap_markers()
+		return
+
+	_ensure_titanium_minimap_markers(titanium_nodes.size())
+	var marker_area := minimap_frame.size - Vector2(8.0, 8.0)
+	for i in range(_minimap_titanium_markers.size()):
+		var marker := _minimap_titanium_markers[i]
+		if i >= titanium_nodes.size():
+			marker.visible = false
+			continue
+		var titanium_node := titanium_nodes[i] as Node2D
+		if titanium_node == null:
+			marker.visible = false
+			continue
+		var titanium_pos: Vector2 = titanium_node.global_position
+		var normalized := Vector2(
+			clampf(titanium_pos.x / world_size.x, 0.0, 1.0),
+			clampf(titanium_pos.y / world_size.y, 0.0, 1.0)
+		)
+		marker.position = Vector2(
+			marker_area.x * normalized.x,
+			marker_area.y * normalized.y
+		)
+		var pulse := 0.72 + (0.28 * sin((_energy_fx_time * 4.5) + (float(i) * 0.9)))
+		marker.modulate = Color(0.78, 0.92, 1.0, pulse)
+		marker.visible = true
+
+
+func _ensure_titanium_minimap_markers(count: int) -> void:
+	while _minimap_titanium_markers.size() < count:
+		var marker := ColorRect.new()
+		marker.name = "TitaniumMarker%d" % _minimap_titanium_markers.size()
+		marker.size = Vector2(8.0, 8.0)
+		marker.color = Color(0.62, 0.86, 1.0, 0.96)
+		marker.visible = false
+		minimap_frame.add_child(marker)
+		_style_minimap_marker(marker, MINIMAP_MARKER_SCALE)
+		_minimap_titanium_markers.append(marker)
+
+
+func _hide_titanium_minimap_markers() -> void:
+	for marker in _minimap_titanium_markers:
+		marker.visible = false
+
+
+func _update_sulfur_minimap() -> void:
+	if minimap_frame == null:
+		return
+
+	var tree := get_tree()
+	if tree == null:
+		_hide_sulfur_minimap_markers()
+		return
+	var sulfur_nodes: Array = tree.get_nodes_in_group("asteroid_sulfur")
+	if sulfur_nodes.is_empty():
+		_hide_sulfur_minimap_markers()
+		return
+
+	var world: Node = get_parent()
+	if world == null:
+		_hide_sulfur_minimap_markers()
+		return
+	var zone_manager: Node = world.get_node_or_null("ZoneManager")
+	if zone_manager == null:
+		_hide_sulfur_minimap_markers()
+		return
+
+	var world_size_variant: Variant = zone_manager.get("world_size")
+	if not (world_size_variant is Vector2):
+		_hide_sulfur_minimap_markers()
+		return
+	var world_size: Vector2 = world_size_variant
+	if world_size.x <= 0.0 or world_size.y <= 0.0:
+		_hide_sulfur_minimap_markers()
+		return
+
+	_ensure_sulfur_minimap_markers(sulfur_nodes.size())
+	var marker_area := minimap_frame.size - Vector2(8.0, 8.0)
+	for i in range(_minimap_sulfur_markers.size()):
+		var marker := _minimap_sulfur_markers[i]
+		if i >= sulfur_nodes.size():
+			marker.visible = false
+			continue
+		var sulfur_node := sulfur_nodes[i] as Node2D
+		if sulfur_node == null:
+			marker.visible = false
+			continue
+		var sulfur_pos: Vector2 = sulfur_node.global_position
+		var normalized := Vector2(
+			clampf(sulfur_pos.x / world_size.x, 0.0, 1.0),
+			clampf(sulfur_pos.y / world_size.y, 0.0, 1.0)
+		)
+		marker.position = Vector2(
+			marker_area.x * normalized.x,
+			marker_area.y * normalized.y
+		)
+		var pulse := 0.78 + (0.22 * sin((_energy_fx_time * 5.2) + (float(i) * 1.1)))
+		marker.modulate = Color(1.0, 0.88, 0.24, pulse)
+		marker.visible = true
+
+
+func _ensure_sulfur_minimap_markers(count: int) -> void:
+	while _minimap_sulfur_markers.size() < count:
+		var marker := ColorRect.new()
+		marker.name = "SulfurMarker%d" % _minimap_sulfur_markers.size()
+		marker.size = Vector2(8.0, 8.0)
+		marker.color = Color(1.0, 0.88, 0.24, 0.96)
+		marker.visible = false
+		minimap_frame.add_child(marker)
+		_style_minimap_marker(marker, MINIMAP_MARKER_SCALE)
+		_minimap_sulfur_markers.append(marker)
+
+
+func _hide_sulfur_minimap_markers() -> void:
+	for marker in _minimap_sulfur_markers:
+		marker.visible = false
+
+
+func _update_wind_minimap() -> void:
+	if minimap_frame == null:
+		return
+	var tree := get_tree()
+	if tree == null:
+		_hide_wind_minimap_markers()
+		return
+	var wind_nodes: Array = tree.get_nodes_in_group("space_wind_zone")
+	if wind_nodes.is_empty():
+		_hide_wind_minimap_markers()
+		return
+	var world: Node = get_parent()
+	if world == null:
+		_hide_wind_minimap_markers()
+		return
+	var zone_manager: Node = world.get_node_or_null("ZoneManager")
+	if zone_manager == null:
+		_hide_wind_minimap_markers()
+		return
+	var world_size_variant: Variant = zone_manager.get("world_size")
+	if not (world_size_variant is Vector2):
+		_hide_wind_minimap_markers()
+		return
+	var world_size: Vector2 = world_size_variant
+	if world_size.x <= 0.0 or world_size.y <= 0.0:
+		_hide_wind_minimap_markers()
+		return
+	_ensure_wind_minimap_markers(wind_nodes.size())
+	var marker_area := minimap_frame.size - Vector2(8.0, 8.0)
+	for i in range(_minimap_wind_markers.size()):
+		var marker := _minimap_wind_markers[i]
+		if i >= wind_nodes.size():
+			marker.visible = false
+			continue
+		var wind_node := wind_nodes[i] as Node2D
+		if wind_node == null:
+			marker.visible = false
+			continue
+		var wind_pos: Vector2 = wind_node.global_position
+		var normalized := Vector2(
+			clampf(wind_pos.x / world_size.x, 0.0, 1.0),
+			clampf(wind_pos.y / world_size.y, 0.0, 1.0)
+		)
+		marker.position = Vector2(marker_area.x * normalized.x, marker_area.y * normalized.y)
+		var pulse := 0.72 + (0.28 * sin((_energy_fx_time * 6.0) + float(i)))
+		marker.modulate = Color(0.38, 1.0, 0.46, pulse)
+		marker.visible = true
+
+
+func _ensure_wind_minimap_markers(count: int) -> void:
+	while _minimap_wind_markers.size() < count:
+		var marker := ColorRect.new()
+		marker.name = "WindMarker%d" % _minimap_wind_markers.size()
+		marker.size = Vector2(8.0, 8.0)
+		marker.color = Color(0.38, 1.0, 0.46, 0.96)
+		marker.visible = false
+		minimap_frame.add_child(marker)
+		_style_minimap_marker(marker, MINIMAP_MARKER_SCALE)
+		_minimap_wind_markers.append(marker)
+
+
+func _hide_wind_minimap_markers() -> void:
+	for marker in _minimap_wind_markers:
+		marker.visible = false

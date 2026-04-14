@@ -157,6 +157,10 @@ func _description(id: String) -> String:
 			return "Asteroidleri yörüngeye alarak kontrol edebilirsin."
 		"crit_chance":
 			return "Mining darbelerine kritik vurma sansi ekler. Kritik vuruslar normal hasarin 2 katini verir."
+		"laser_duration":
+			return "Silia lazerinin aktif kalma suresini uzatir. Her seviyede lazer vurus zamani %10 artar."
+		"dual_laser":
+			return "Silia sisteminin ayni anda iki ayri kume lazeri olusturmasini saglar."
 		"energy_orb_magnet":
 			return "Enerji orb cekim mesafesini her seviyede 1.5 kat buyutur."
 		"bh_core":
@@ -187,6 +191,10 @@ func _effect_text(id: String, level: int) -> String:
 			return "Yörünge kapasitesi: %d asteroid" % maxi(1, level)
 		"crit_chance":
 			return "Kritik sansi: %d%%" % roundi(level * 3.0)
+		"laser_duration":
+			return "Lazer sure bonusu: +%d%%" % int(level * 10)
+		"dual_laser":
+			return "Eszamanli lazer sayisi: %d" % (1 + level)
 		"energy_orb_magnet":
 			return "Orb cekim carpani: x%.1f" % pow(1.5, float(level))
 		"bh_gravity_well":

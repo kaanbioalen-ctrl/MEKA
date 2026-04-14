@@ -8,6 +8,7 @@ const WORLD_ONE_SCENE := "res://scenes/world/world.tscn"
 const WORLD_TWO_SCENE   := "res://scenes/world/world2.tscn"
 const WORLD_THREE_SCENE := "res://scenes/world/world3.tscn"
 const WORLD_TEST_SCENE  := "res://scenes/world/world_test.tscn"
+const WORLD_TEST_PLAYER_SPEED_MULTIPLIER: float = 3.0
 const WORLD_TWO_GATE_FIRST_RELOCATE_DELAY: float = 30.0
 const WORLD_TWO_GATE_RELOCATE_INTERVAL: float = 180.0
 const WORLD_TWO_GATE_WORLD_MARGIN: float = 260.0
@@ -46,6 +47,7 @@ func _ready() -> void:
 	zone_manager.rebuild(viewport_size)
 	_apply_world_bounds_to_player()
 	_center_player()
+	_apply_test_map_player_speed()
 	_configure_asteroid_spawner(viewport_size)
 	_configure_worm_spawner(viewport_size)
 	_configure_enemy_director()
@@ -58,6 +60,7 @@ func _ready() -> void:
 	var run_state := get_node_or_null("/root/RunState")
 	if run_state != null and bool(run_state.get("coming_from_portal")):
 		run_state.set("coming_from_portal", false)
+		_apply_run_state_to_scene()
 		run_state.active = true
 	elif run_state != null and bool(run_state.auto_load_save):
 		run_state.auto_load_save = false
@@ -169,6 +172,18 @@ func _center_player() -> void:
 		player_node.accumulated_position = player_node.global_position
 	if player_node.has_method("snap_interpolation_to_current_position"):
 		player_node.call("snap_interpolation_to_current_position")
+
+
+func _apply_test_map_player_speed() -> void:
+	if String(scene_file_path) != WORLD_TEST_SCENE:
+		return
+	var player_node := get_node_or_null("Player")
+	if player_node == null:
+		return
+	if player_node.get("min_speed") != null:
+		player_node.set("min_speed", float(player_node.get("min_speed")) * WORLD_TEST_PLAYER_SPEED_MULTIPLIER)
+	if player_node.get("max_speed") != null:
+		player_node.set("max_speed", float(player_node.get("max_speed")) * WORLD_TEST_PLAYER_SPEED_MULTIPLIER)
 
 
 func _configure_asteroid_spawner(viewport_size: Vector2) -> void:
@@ -584,6 +599,8 @@ func _apply_save_to_run(data: Dictionary) -> void:
 		run_state.damage_aura_upgrade_level  = int(data.get("damage_aura_upgrade_level", 0))
 		run_state.orbit_mode_upgrade_level   = int(data.get("orbit_mode_upgrade_level", 0))
 		run_state.crit_chance_upgrade_level  = int(data.get("crit_chance_upgrade_level", 0))
+		run_state.laser_duration_upgrade_level = int(data.get("laser_duration_upgrade_level", 0))
+		run_state.dual_laser_upgrade_level = int(data.get("dual_laser_upgrade_level", 0))
 		run_state.attraction_skill_unlocked  = bool(data.get("attraction_skill_unlocked", int(run_state.energy_field_upgrade_level) > 0))
 		run_state.drop_collection_skill_unlocked = bool(data.get("drop_collection_skill_unlocked", false))
 		run_state.blackhole_level = int(data.get("blackhole_level", 1))
@@ -599,15 +616,22 @@ func _apply_save_to_run(data: Dictionary) -> void:
 		run_state.crystal = int(data.get("crystal", 0))
 		run_state.uranium = int(data.get("uranium", 0))
 		run_state.titanium = int(data.get("titanium", 0))
-	var player_node := get_node_or_null("Player")
-	if player_node != null:
-		player_node.set("iron",    int(data.get("iron", 0)))
-		player_node.set("gold",    int(data.get("gold", 0)))
-		player_node.set("crystal", int(data.get("crystal", 0)))
-		player_node.set("uranium", int(data.get("uranium", 0)))
-		player_node.set("titanium", int(data.get("titanium", 0)))
+	_apply_run_state_to_scene()
 	if black_hole != null and black_hole.has_method("reload_from_run_state"):
 		black_hole.call("reload_from_run_state")
+
+
+func _apply_run_state_to_scene() -> void:
+	var run_state := get_node_or_null("/root/RunState")
+	if run_state == null:
+		return
+	var player_node := get_node_or_null("Player")
+	if player_node != null:
+		player_node.set("iron", int(run_state.iron))
+		player_node.set("gold", int(run_state.gold))
+		player_node.set("crystal", int(run_state.crystal))
+		player_node.set("uranium", int(run_state.uranium))
+		player_node.set("titanium", int(run_state.titanium))
 
 
 func _close_main_menu() -> void:

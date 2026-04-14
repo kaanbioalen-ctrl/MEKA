@@ -5,7 +5,7 @@
 [resource]
 script = ExtResource("1_def")
 definition_id = &"asteroid_crystal_medium"
-display_name = "Medium Crystal Asteroid"
+display_name = "Medium Diamond Asteroid"
 max_hp = 660.0
 radius = 34.0
 speed = 42.0

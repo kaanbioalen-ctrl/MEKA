@@ -94,11 +94,17 @@ const DEATH_SHATTER_SCENE: PackedScene  = preload("res://scenes/effects/player_d
 const OVERLOAD_BURST_SCENE: PackedScene = preload("res://scenes/effects/player_overload_burst.tscn")
 const _WAVE_EMITTER_SCRIPT              = preload("res://scripts/player/wave_damage_emitter.gd")
 const _GRAVITY_VISUAL_SCRIPT            = preload("res://scripts/player/player_gravity_visual.gd")
+const _WEAPON_RING_SCRIPT               = preload("res://scripts/player/weapon_ring.gd")
+const _ATTACK_CONTROLLER_SCRIPT         = preload("res://scripts/player/attack_controller.gd")
+const _CELL_BARRIER_SCRIPT              = preload("res://scripts/player/cell_barrier.gd")
 
 var _base_damage_aura_radius: float = 100.0
 var _energy_field_radius:     float = 8.0
-var _wave_emitter:    Node2D = null
-var _gravity_visual:  Node2D = null
+var _wave_emitter:       Node2D = null
+var _gravity_visual:     Node2D = null
+var _weapon_ring:        Node2D = null
+var _attack_controller:  Node2D = null
+var _cell_barrier:       Node2D = null
 
 
 func _ready() -> void:
@@ -121,6 +127,8 @@ func _ready() -> void:
 
 	_setup_wave_emitter()
 	_setup_gravity_visual()
+	_setup_cell_barrier()
+	_setup_attack_controller()
 	_update_mining_tick_interval()
 	_update_damage_aura_size()
 	_update_attraction_field_state()
@@ -359,6 +367,9 @@ func die() -> void:
 	if contact_detector != null: contact_detector.set_deferred("monitoring", false)
 	if damage_aura      != null: damage_aura.set_deferred("monitoring", false)
 	if visual_root      != null: visual_root.visible = false
+	if _attack_controller != null:
+		_attack_controller.set_physics_process(false)
+		_attack_controller.set_process(false)
 
 	_spawn_death_shatter()
 	died.emit()
@@ -574,6 +585,31 @@ func _setup_gravity_visual() -> void:
 	_gravity_visual      = _GRAVITY_VISUAL_SCRIPT.new()
 	_gravity_visual.name = "GravityVisual"
 	visual_root.add_child(_gravity_visual)
+
+
+func _setup_cell_barrier() -> void:
+	if visual_root == null:
+		return
+	_cell_barrier      = _CELL_BARRIER_SCRIPT.new()
+	_cell_barrier.name = "CellBarrier"
+	visual_root.add_child(_cell_barrier)
+
+
+func _setup_attack_controller() -> void:
+	_attack_controller      = _ATTACK_CONTROLLER_SCRIPT.new()
+	_attack_controller.name = "AttackController"
+	add_child(_attack_controller)
+
+
+func _setup_weapon_ring() -> void:
+	if visual_root == null:
+		return
+	_weapon_ring      = _WEAPON_RING_SCRIPT.new()
+	_weapon_ring.name = "WeaponRing"
+	visual_root.add_child(_weapon_ring)
+	# Attack controller'a ring referansını ver
+	if _attack_controller != null:
+		_attack_controller.set("_weapon_ring", _weapon_ring)
 
 
 # ── Private: visual updates ────────────────────────────────────────────────────

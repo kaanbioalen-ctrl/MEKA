@@ -178,6 +178,8 @@ func emit_wave(damage: float, is_crit: bool) -> void:
 	var max_r := _get_max_radius()
 	if max_r <= WAVE_START_RADIUS:
 		return
+	if not _has_asteroid_in_damage_radius(max_r):
+		return
 	var speed := (max_r - WAVE_START_RADIUS) / WAVE_TRAVEL_TIME
 	_waves.append({
 		"r"       : WAVE_START_RADIUS,
@@ -190,6 +192,22 @@ func emit_wave(damage: float, is_crit: bool) -> void:
 	})
 	_pulse_t = 0.0
 	queue_redraw()
+
+
+func _has_asteroid_in_damage_radius(radius: float) -> bool:
+	var tree := get_tree()
+	if tree == null:
+		return false
+	var my_pos := global_position
+	for node in tree.get_nodes_in_group("asteroid"):
+		if not (node is Node2D):
+			continue
+		if not is_instance_valid(node):
+			continue
+		var asteroid := node as Node2D
+		if asteroid.global_position.distance_to(my_pos) <= radius:
+			return true
+	return false
 
 
 # ── Hasar tespiti ──────────────────────────────────────────────────────────────

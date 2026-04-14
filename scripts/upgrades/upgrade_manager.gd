@@ -451,6 +451,250 @@ func downgrade_crit_chance_upgrade() -> bool:
 	return true
 
 
+func can_buy_laser_duration_upgrade() -> bool:
+	var run_state := get_run_state()
+	if run_state == null:
+		return false
+	if not _has_attraction_prerequisite():
+		return false
+	if int(run_state.laser_duration_upgrade_level) >= UpgradeDefinitions.MAX_LASER_DURATION_UPGRADE_LEVEL:
+		return false
+	return _can_pay_upgrade_cost(int(run_state.laser_duration_upgrade_level))
+
+
+func get_next_laser_duration_upgrade_cost() -> int:
+	var run_state := get_run_state()
+	if run_state == null:
+		return 0
+	return _get_total_cost(int(run_state.laser_duration_upgrade_level), UpgradeDefinitions.MAX_LASER_DURATION_UPGRADE_LEVEL)
+
+
+func buy_laser_duration_upgrade() -> bool:
+	var run_state := get_run_state()
+	if run_state == null:
+		return false
+	if not can_buy_laser_duration_upgrade():
+		return false
+	if not _pay_upgrade_cost(int(run_state.laser_duration_upgrade_level)):
+		return false
+	run_state.laser_duration_upgrade_level += 1
+	return true
+
+
+func downgrade_laser_duration_upgrade() -> bool:
+	var run_state := get_run_state()
+	if run_state == null:
+		return false
+	var lvl := int(run_state.laser_duration_upgrade_level)
+	if lvl <= 0:
+		return false
+	_refund_cost(get_upgrade_cost_info(lvl - 1))
+	run_state.laser_duration_upgrade_level -= 1
+	return true
+
+
+func can_buy_dual_laser_upgrade() -> bool:
+	var run_state := get_run_state()
+	if run_state == null:
+		return false
+	if not _has_attraction_prerequisite():
+		return false
+	if int(run_state.dual_laser_upgrade_level) >= UpgradeDefinitions.MAX_DUAL_LASER_UPGRADE_LEVEL:
+		return false
+	return _can_pay_upgrade_cost(int(run_state.dual_laser_upgrade_level))
+
+
+func buy_dual_laser_upgrade() -> bool:
+	var run_state := get_run_state()
+	if run_state == null:
+		return false
+	if not can_buy_dual_laser_upgrade():
+		return false
+	if not _pay_upgrade_cost(int(run_state.dual_laser_upgrade_level)):
+		return false
+	run_state.dual_laser_upgrade_level += 1
+	return true
+
+
+func downgrade_dual_laser_upgrade() -> bool:
+	var run_state := get_run_state()
+	if run_state == null:
+		return false
+	var lvl := int(run_state.dual_laser_upgrade_level)
+	if lvl <= 0:
+		return false
+	_refund_cost(get_upgrade_cost_info(lvl - 1))
+	run_state.dual_laser_upgrade_level -= 1
+	return true
+
+
+# ── Silah kilitleri ────────────────────────────────────────────────────────────
+
+func get_weapon_upgrade_cost_info(level: int) -> Dictionary:
+	if level < 0 or level >= UpgradeDefinitions.WEAPON_UPGRADE_COSTS.size():
+		return {"iron": 0, "gold": 0, "crystal": 0}
+	return UpgradeDefinitions.WEAPON_UPGRADE_COSTS[level].duplicate()
+
+
+func can_unlock_laser_weapon() -> bool:
+	var run_state := get_run_state()
+	if run_state == null:
+		return false
+	if bool(run_state.laser_unlocked):
+		return false
+	return _can_pay_specific_cost(UpgradeDefinitions.LASER_UNLOCK_COST)
+
+
+func unlock_laser_weapon() -> bool:
+	var run_state := get_run_state()
+	if run_state == null:
+		return false
+	if not can_unlock_laser_weapon():
+		return false
+	if not _pay_specific_cost(UpgradeDefinitions.LASER_UNLOCK_COST):
+		return false
+	run_state.laser_unlocked = true
+	return true
+
+
+func can_unlock_bullet_weapon() -> bool:
+	var run_state := get_run_state()
+	if run_state == null:
+		return false
+	if not bool(run_state.laser_unlocked):
+		return false
+	if bool(run_state.bullet_unlocked):
+		return false
+	return _can_pay_specific_cost(UpgradeDefinitions.BULLET_UNLOCK_COST)
+
+
+func unlock_bullet_weapon() -> bool:
+	var run_state := get_run_state()
+	if run_state == null:
+		return false
+	if not can_unlock_bullet_weapon():
+		return false
+	if not _pay_specific_cost(UpgradeDefinitions.BULLET_UNLOCK_COST):
+		return false
+	run_state.bullet_unlocked = true
+	return true
+
+
+func can_unlock_rocket_weapon() -> bool:
+	var run_state := get_run_state()
+	if run_state == null:
+		return false
+	if not bool(run_state.bullet_unlocked):
+		return false
+	if bool(run_state.rocket_unlocked):
+		return false
+	return _can_pay_specific_cost(UpgradeDefinitions.ROCKET_UNLOCK_COST)
+
+
+func unlock_rocket_weapon() -> bool:
+	var run_state := get_run_state()
+	if run_state == null:
+		return false
+	if not can_unlock_rocket_weapon():
+		return false
+	if not _pay_specific_cost(UpgradeDefinitions.ROCKET_UNLOCK_COST):
+		return false
+	run_state.rocket_unlocked = true
+	return true
+
+
+func can_buy_laser_upgrade() -> bool:
+	var run_state := get_run_state()
+	if run_state == null:
+		return false
+	if not bool(run_state.laser_unlocked):
+		return false
+	var lvl := int(run_state.laser_upgrade_level)
+	if lvl >= UpgradeDefinitions.MAX_WEAPON_UPGRADE_LEVEL:
+		return false
+	return _can_pay_specific_cost(get_weapon_upgrade_cost_info(lvl))
+
+
+func buy_laser_upgrade() -> bool:
+	var run_state := get_run_state()
+	if run_state == null:
+		return false
+	if not can_buy_laser_upgrade():
+		return false
+	if not _pay_specific_cost(get_weapon_upgrade_cost_info(int(run_state.laser_upgrade_level))):
+		return false
+	run_state.laser_upgrade_level += 1
+	return true
+
+
+func can_buy_bullet_upgrade() -> bool:
+	var run_state := get_run_state()
+	if run_state == null:
+		return false
+	if not bool(run_state.bullet_unlocked):
+		return false
+	var bounce_lvl := int(run_state.bullet_bounce_upgrade_level)
+	var dmg_lvl    := int(run_state.bullet_damage_upgrade_level)
+	var lvl        := maxi(bounce_lvl, dmg_lvl)
+	if lvl >= UpgradeDefinitions.MAX_WEAPON_UPGRADE_LEVEL:
+		return false
+	return _can_pay_specific_cost(get_weapon_upgrade_cost_info(bounce_lvl))
+
+
+func buy_bullet_bounce_upgrade() -> bool:
+	var run_state := get_run_state()
+	if run_state == null:
+		return false
+	if not bool(run_state.bullet_unlocked):
+		return false
+	var lvl := int(run_state.bullet_bounce_upgrade_level)
+	if lvl >= UpgradeDefinitions.MAX_WEAPON_UPGRADE_LEVEL:
+		return false
+	if not _pay_specific_cost(get_weapon_upgrade_cost_info(lvl)):
+		return false
+	run_state.bullet_bounce_upgrade_level += 1
+	return true
+
+
+func buy_bullet_damage_upgrade() -> bool:
+	var run_state := get_run_state()
+	if run_state == null:
+		return false
+	if not bool(run_state.bullet_unlocked):
+		return false
+	var lvl := int(run_state.bullet_damage_upgrade_level)
+	if lvl >= UpgradeDefinitions.MAX_WEAPON_UPGRADE_LEVEL:
+		return false
+	if not _pay_specific_cost(get_weapon_upgrade_cost_info(lvl)):
+		return false
+	run_state.bullet_damage_upgrade_level += 1
+	return true
+
+
+func can_buy_rocket_upgrade() -> bool:
+	var run_state := get_run_state()
+	if run_state == null:
+		return false
+	if not bool(run_state.rocket_unlocked):
+		return false
+	var lvl := int(run_state.rocket_upgrade_level)
+	if lvl >= UpgradeDefinitions.MAX_WEAPON_UPGRADE_LEVEL:
+		return false
+	return _can_pay_specific_cost(get_weapon_upgrade_cost_info(lvl))
+
+
+func buy_rocket_upgrade() -> bool:
+	var run_state := get_run_state()
+	if run_state == null:
+		return false
+	if not can_buy_rocket_upgrade():
+		return false
+	if not _pay_specific_cost(get_weapon_upgrade_cost_info(int(run_state.rocket_upgrade_level))):
+		return false
+	run_state.rocket_upgrade_level += 1
+	return true
+
+
 func can_toggle_developer_mode() -> bool:
 	var run_state := get_run_state()
 	return run_state != null

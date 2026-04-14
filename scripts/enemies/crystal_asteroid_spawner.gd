@@ -6,11 +6,14 @@ const SMALL_CRYSTAL_WEIGHT  := 50.0
 const MEDIUM_CRYSTAL_WEIGHT := 32.0
 const LARGE_CRYSTAL_WEIGHT  := 18.0
 const URANIUM_SPAWN_CHANCE  := 0.10
+const TITANIUM_SPAWN_CHANCE := 0.75
 
 @export var crystal_asteroid_scene:    PackedScene
 @export var small_crystal_definition:  AsteroidDefinition
 @export var medium_crystal_definition: AsteroidDefinition
 @export var large_crystal_definition:  AsteroidDefinition
+@export var titanium_asteroid_scene:   PackedScene
+@export var titanium_definition:       AsteroidDefinition
 @export var uranium_small_scene:       PackedScene
 @export var uranium_medium_scene:      PackedScene
 @export var uranium_large_scene:       PackedScene
@@ -258,6 +261,9 @@ func _instantiate_crystal_asteroid() -> Node2D:
 	var use_uranium := _can_spawn_uranium() and randf() < URANIUM_SPAWN_CHANCE
 	if use_uranium:
 		return _instantiate_uranium_asteroid()
+	var use_titanium := _can_spawn_titanium() and randf() < TITANIUM_SPAWN_CHANCE
+	if use_titanium:
+		return _instantiate_titanium_asteroid()
 	if crystal_asteroid_scene == null:
 		return null
 	var asteroid := crystal_asteroid_scene.instantiate() as Node2D
@@ -265,6 +271,17 @@ func _instantiate_crystal_asteroid() -> Node2D:
 		return null
 	if asteroid.has_method("set_definition"):
 		asteroid.call("set_definition", _pick_weighted_crystal_definition())
+	return asteroid
+
+
+func _instantiate_titanium_asteroid() -> Node2D:
+	if titanium_asteroid_scene == null:
+		return null
+	var asteroid := titanium_asteroid_scene.instantiate() as Node2D
+	if asteroid == null:
+		return null
+	if titanium_definition != null and asteroid.has_method("set_definition"):
+		asteroid.call("set_definition", titanium_definition)
 	return asteroid
 
 
@@ -335,3 +352,7 @@ func _can_spawn_uranium() -> bool:
 		and uranium_medium_definition != null
 		and uranium_large_definition != null
 	)
+
+
+func _can_spawn_titanium() -> bool:
+	return titanium_asteroid_scene != null

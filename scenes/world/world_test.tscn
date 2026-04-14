@@ -10,6 +10,8 @@
 [ext_resource type="Script"       path="res://scripts/world/space_background.gd" id="14_spacebg"]
 [ext_resource type="Script"       path="res://scripts/enemies/devasa_spawner.gd"   id="15_devasa"]
 [ext_resource type="PackedScene"  path="res://scenes/asteroids/TitaniumAsteroid.tscn" id="16_titanium"]
+[ext_resource type="PackedScene"  path="res://scenes/asteroids/SulfurAsteroid.tscn" id="17_sulfur"]
+[ext_resource type="PackedScene"  path="res://scenes/world/space_wind_zone.tscn" id="18_wind"]
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_milky"]
 shader = ExtResource("0_milky")
@@ -51,7 +53,20 @@ script = ExtResource("15_devasa")
 [node name="WormSpawner" type="Node2D" parent="."]
 
 [node name="TitaniumAsteroidTest" parent="." instance=ExtResource("16_titanium")]
-position = Vector2(5480, 2700)
+position = Vector2(960, 540)
+
+[node name="TitaniumAsteroidSpawnNearPlayer" parent="." instance=ExtResource("16_titanium")]
+position = Vector2(1035, 540)
+
+[node name="SulfurAsteroidTest" parent="." instance=ExtResource("17_sulfur")]
+position = Vector2(1060, 540)
+
+[node name="SpaceWindZoneTest" parent="." instance=ExtResource("18_wind")]
+position = Vector2(1460, 640)
+radius = 340.0
+wind_speed = 220.0
+spawn_count = 10
+wind_direction = Vector2(-0.75, 0.32)
 
 [node name="HUD" type="CanvasLayer" parent="."]
 script = ExtResource("4_8x6rw")
@@ -102,7 +117,7 @@ offset_right = 360.0
 offset_bottom = 126.0
 theme_override_colors/font_color = Color(1.0, 0.55, 0.55, 1)
 theme_override_font_sizes/font_size = 24
-text = "KRISTAL: 0"
+text = "ELMAS: 0"
 
 [node name="MultiplierLabel" type="Label" parent="HUD"]
 offset_left = 20.0

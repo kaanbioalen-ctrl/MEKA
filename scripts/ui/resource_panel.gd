@@ -1,7 +1,7 @@
 extends Control
 class_name ResourcePanel
 ## Left-side resource display panel.
-## Shows Iron / Gold / Crystal with flash animation on value change.
+## Shows Iron / Gold / Elmas with flash animation on value change.
 ## Pure Control — immune to Camera2D zoom.
 
 const FLASH_DURATION: float = 0.50
@@ -14,7 +14,7 @@ var _rows: Array[Dictionary] = []   # [{lbl, base_col, prev, flash}]
 const RESOURCE_DEFS: Array[Dictionary] = [
 	{"key": "iron",    "icon": "Fe", "label": "Iron",    "color": Color(0.78, 0.88, 1.0, 1.0)},
 	{"key": "gold",    "icon": "Au", "label": "Gold",    "color": Color(1.0,  0.88, 0.38, 1.0)},
-	{"key": "crystal", "icon": "Kr", "label": "Crystal", "color": Color(0.68, 1.0,  0.90, 1.0)},
+	{"key": "crystal", "icon": "El", "label": "Elmas", "color": Color(0.68, 1.0,  0.90, 1.0)},
 ]
 
 

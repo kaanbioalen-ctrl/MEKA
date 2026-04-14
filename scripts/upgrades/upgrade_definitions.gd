@@ -46,6 +46,8 @@ const MAX_ENERGY_ORB_MAGNET_UPGRADE_LEVEL: int = 5
 const MAX_DAMAGE_AURA_UPGRADE_LEVEL: int = 3
 const MAX_ORBIT_MODE_UPGRADE_LEVEL: int = 5
 const MAX_CRIT_CHANCE_UPGRADE_LEVEL: int = 6
+const MAX_LASER_DURATION_UPGRADE_LEVEL: int = 6
+const MAX_DUAL_LASER_UPGRADE_LEVEL: int = 1
 
 const ATTRACTION_SKILL_IRON_COST: int = 3
 const DROP_COLLECTION_SKILL_GOLD_COST: int = 3
@@ -54,3 +56,30 @@ const DEVELOPER_MODE_COST: int = 0
 const DEVELOPER_MODE_IRON_REWARD: int = 100000
 const DEVELOPER_MODE_GOLD_REWARD: int = 100000
 const DEVELOPER_MODE_CRYSTAL_REWARD: int = 100000
+
+# ── Silah kilit maliyetleri ────────────────────────────────────────────────────
+const LASER_UNLOCK_COST:  Dictionary = {"iron": 15, "gold": 2,  "crystal": 0}
+const BULLET_UNLOCK_COST: Dictionary = {"iron": 20, "gold": 5,  "crystal": 0}
+const ROCKET_UNLOCK_COST: Dictionary = {"iron": 0,  "gold": 15, "crystal": 1}
+
+# ── Silah upgrade maliyetleri (level başına, 0–2) ──────────────────────────────
+const WEAPON_UPGRADE_COSTS: Array[Dictionary] = [
+	{"iron": 10, "gold": 2,  "crystal": 0},
+	{"iron": 20, "gold": 5,  "crystal": 0},
+	{"iron": 40, "gold": 10, "crystal": 0},
+]
+const MAX_WEAPON_UPGRADE_LEVEL: int = 3
+
+# ── Lazer değerleri (level 0–3) ────────────────────────────────────────────────
+const LASER_COOLDOWN_VALUES: Array[float] = [0.18, 0.14, 0.11, 0.08]
+const LASER_DAMAGE_VALUES:   Array[float] = [3.0,  4.0,  5.5,  7.0]
+
+# ── Seken mermi değerleri (level 0–3) ─────────────────────────────────────────
+const BULLET_DAMAGE_VALUES:   Array[float] = [4.0,  5.0,  7.0,  10.0]
+const BULLET_BOUNCE_VALUES:   Array[int]   = [3,    4,    5,    6   ]
+const BULLET_COOLDOWN_VALUES: Array[float] = [1.20, 1.00, 0.85, 0.70]
+
+# ── Roket değerleri (level 0–3) ────────────────────────────────────────────────
+const ROCKET_DAMAGE_VALUES:   Array[float] = [12.0, 16.0, 22.0, 30.0]
+const ROCKET_RADIUS_VALUES:   Array[float] = [80.0, 100.0,125.0,155.0]
+const ROCKET_COOLDOWN_VALUES: Array[float] = [3.0,  2.5,  2.0,  1.6 ]

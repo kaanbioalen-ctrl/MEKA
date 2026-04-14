@@ -5,6 +5,7 @@ extends Node2D
 const SMALL_URANIUM_WEIGHT  := 50.0
 const MEDIUM_URANIUM_WEIGHT := 32.0
 const LARGE_URANIUM_WEIGHT  := 18.0
+const SULFUR_SPAWN_CHANCE   := 0.75
 
 @export var uranium_small_scene:       PackedScene
 @export var uranium_medium_scene:      PackedScene
@@ -12,6 +13,8 @@ const LARGE_URANIUM_WEIGHT  := 18.0
 @export var uranium_small_definition:  AsteroidDefinition
 @export var uranium_medium_definition: AsteroidDefinition
 @export var uranium_large_definition:  AsteroidDefinition
+@export var sulfur_scene:              PackedScene
+@export var sulfur_definition:         AsteroidDefinition
 @export_range(0.1, 2.0, 0.05) var tick_interval:                    float = 0.25
 @export_range(80.0, 1200.0, 1.0) var safe_spawn_radius:             float = 280.0
 @export_range(32.0, 800.0, 1.0) var spawn_margin_outside_view:      float = 180.0
@@ -255,6 +258,9 @@ func _can_run() -> bool:
 
 
 func _instantiate_uranium_asteroid() -> Node2D:
+	var use_sulfur := _can_spawn_sulfur() and randf() < SULFUR_SPAWN_CHANCE
+	if use_sulfur:
+		return _instantiate_sulfur_asteroid()
 	var size_key      := _pick_weighted_size_key()
 	var uranium_scene := _get_scene_for_size(size_key)
 	var uranium_def   := _get_definition_for_size(size_key)
@@ -265,6 +271,17 @@ func _instantiate_uranium_asteroid() -> Node2D:
 		return null
 	if asteroid.has_method("set_definition"):
 		asteroid.call("set_definition", uranium_def)
+	return asteroid
+
+
+func _instantiate_sulfur_asteroid() -> Node2D:
+	if sulfur_scene == null:
+		return null
+	var asteroid := sulfur_scene.instantiate() as Node2D
+	if asteroid == null:
+		return null
+	if sulfur_definition != null and asteroid.has_method("set_definition"):
+		asteroid.call("set_definition", sulfur_definition)
 	return asteroid
 
 
@@ -292,3 +309,7 @@ func _get_definition_for_size(size_key: String) -> AsteroidDefinition:
 		"small": return uranium_small_definition
 		"large": return uranium_large_definition
 		_:       return uranium_medium_definition
+
+
+func _can_spawn_sulfur() -> bool:
+	return sulfur_scene != null

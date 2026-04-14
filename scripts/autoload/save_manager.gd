@@ -61,6 +61,8 @@ func build_save_data(player: Node, run_state: Node) -> Dictionary:
 		data["damage_aura_upgrade_level"]  = int(run_state.damage_aura_upgrade_level)
 		data["orbit_mode_upgrade_level"]   = int(run_state.orbit_mode_upgrade_level)
 		data["crit_chance_upgrade_level"]  = int(run_state.crit_chance_upgrade_level)
+		data["laser_duration_upgrade_level"] = int(run_state.laser_duration_upgrade_level)
+		data["dual_laser_upgrade_level"] = int(run_state.dual_laser_upgrade_level)
 		data["attraction_skill_unlocked"]  = bool(run_state.attraction_skill_unlocked)
 		data["drop_collection_skill_unlocked"] = bool(run_state.drop_collection_skill_unlocked)
 		data["blackhole_level"] = int(run_state.blackhole_level)

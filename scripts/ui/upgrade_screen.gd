@@ -28,8 +28,8 @@ const SKILL_OFFSETS: Dictionary = {
 		"energy_orb_magnet": Vector2( 297.0, -297.0),
 		"crit_chance": Vector2( 297.0,  297.0),
 	# Ring 3 (r=420) — placeholder slots, equally spaced at 45° offset
-	"placeholder_b":   Vector2(-297.0,  297.0),
-	"placeholder_c":   Vector2(-297.0, -297.0),
+	"laser_duration":  Vector2(-297.0,  297.0),
+	"dual_laser":      Vector2(-297.0, -297.0),
 	"placeholder_d":   Vector2( 420.0,    0.0),
 }
 
@@ -62,10 +62,10 @@ const ORBIT_LAYOUTS: Dictionary = {
 	"crit_chance": {
 		"radius": 295.0, "base_angle": PI * 0.54, "speed": 0.62, "flatten": ORBIT_FLATTEN, "ring_key": "mid",
 	},
-	"placeholder_b": {
+	"laser_duration": {
 		"radius": 420.0, "base_angle": PI * 0.62, "speed": 0.34, "flatten": ORBIT_FLATTEN, "ring_key": "outer",
 	},
-	"placeholder_c": {
+	"dual_laser": {
 		"radius": 420.0, "base_angle": -PI * 0.62, "speed": 0.34, "flatten": ORBIT_FLATTEN, "ring_key": "outer",
 	},
 	"placeholder_d": {
@@ -110,6 +110,8 @@ const CONNECTIONS: Array = [
 	["energy_field", "orbit_mode"],
 	["energy_field", "energy_orb_magnet"],
 	["energy_field", "crit_chance"],
+	["energy_field", "laser_duration"],
+	["energy_field", "dual_laser"],
 ]
 
 const BLACK_HOLE_CONNECTIONS: Array = [
@@ -181,15 +183,15 @@ const SKILL_CONFIGS: Dictionary = {
 		"buy_method": "buy_orbit_mode_upgrade", "can_method": "can_buy_orbit_mode_upgrade",
 	},
 	# Placeholder — gelecek skill slotları
-	"placeholder_b": {
-		"label": "???", "short": "", "is_root": false, "large": false, "placeholder": true,
-		"skill_class": "DEFAULT",
-		"buy_method": "", "can_method": "",
+	"laser_duration": {
+		"label": "Lazer\nSuresi", "short": "L", "is_root": false, "large": false,
+		"skill_class": "COMBAT",
+		"buy_method": "buy_laser_duration_upgrade", "can_method": "can_buy_laser_duration_upgrade",
 	},
-	"placeholder_c": {
-		"label": "???", "short": "", "is_root": false, "large": false, "placeholder": true,
-		"skill_class": "DEFAULT",
-		"buy_method": "", "can_method": "",
+	"dual_laser": {
+		"label": "Cift\nLazer", "short": "2L", "is_root": false, "large": false,
+		"skill_class": "COMBAT",
+		"buy_method": "buy_dual_laser_upgrade", "can_method": "can_buy_dual_laser_upgrade",
 	},
 	"placeholder_d": {
 		"label": "???", "short": "", "is_root": false, "large": false, "placeholder": true,
@@ -984,6 +986,28 @@ func _build_state(skill_id: String, rs: Node, um: Node) -> Dictionary:
 			st["can_buy"]     = pre and lvl < max_l and bool(um.call("can_buy_crit_chance_upgrade"))
 			st["cost_text"]   = _fmt_cost(um.call("get_upgrade_cost_info", lvl)) if (pre and lvl < max_l) else ""
 			st["status_text"] = _level_str(lvl, max_l, pre) + "\nKritik: %%%d" % crit_percent
+		"laser_duration":
+			var lvl: int    = int(rs.laser_duration_upgrade_level)
+			var max_l: int  = UpgradeDefinitions.MAX_LASER_DURATION_UPGRADE_LEVEL
+			var pre: bool   = bool(rs.attraction_skill_unlocked)
+			var duration_bonus: int = roundi((UpgradeEffects.get_laser_duration_multiplier(rs) - 1.0) * 100.0)
+			st["locked"]      = not pre
+			st["level"]       = lvl
+			st["max_level"]   = max_l
+			st["can_buy"]     = pre and lvl < max_l and bool(um.call("can_buy_laser_duration_upgrade"))
+			st["cost_text"]   = _fmt_cost(um.call("get_upgrade_cost_info", lvl)) if (pre and lvl < max_l) else ""
+			st["status_text"] = _level_str(lvl, max_l, pre) + "\nSure: +%%%d" % duration_bonus
+		"dual_laser":
+			var lvl: int    = int(rs.dual_laser_upgrade_level)
+			var max_l: int  = UpgradeDefinitions.MAX_DUAL_LASER_UPGRADE_LEVEL
+			var pre: bool   = bool(rs.attraction_skill_unlocked)
+			var laser_count: int = UpgradeEffects.get_simultaneous_cluster_laser_count(rs)
+			st["locked"]      = not pre
+			st["level"]       = lvl
+			st["max_level"]   = max_l
+			st["can_buy"]     = pre and lvl < max_l and bool(um.call("can_buy_dual_laser_upgrade"))
+			st["cost_text"]   = _fmt_cost(um.call("get_upgrade_cost_info", lvl)) if (pre and lvl < max_l) else ""
+			st["status_text"] = _level_str(lvl, max_l, pre) + "\nEszamanli: %d" % laser_count
 	return st
 
 
@@ -1120,6 +1144,8 @@ func _on_skill_downgraded(skill_id: String) -> void:
 		"damage_aura":     method = "downgrade_damage_aura_upgrade"
 		"energy_orb_magnet": method = "downgrade_energy_orb_magnet_upgrade"
 		"crit_chance":     method = "downgrade_crit_chance_upgrade"
+		"laser_duration":  method = "downgrade_laser_duration_upgrade"
+		"dual_laser":      method = "downgrade_dual_laser_upgrade"
 		"orbit_mode":      method = "downgrade_orbit_mode_upgrade"
 	if method.is_empty() or not um.has_method(method):
 		return

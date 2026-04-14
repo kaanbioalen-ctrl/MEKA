@@ -13,6 +13,8 @@
 [ext_resource type="Resource"     path="res://resources/asteroids/uranium_small.tres"           id="6_u_small"]
 [ext_resource type="Resource"     path="res://resources/asteroids/uranium_medium.tres"          id="6_u_medium"]
 [ext_resource type="Resource"     path="res://resources/asteroids/uranium_large.tres"           id="6_u_large"]
+[ext_resource type="PackedScene"  path="res://scenes/asteroids/SulfurAsteroid.tscn"             id="6_sulfur_scene"]
+[ext_resource type="Resource"     path="res://resources/asteroids/sulfur_medium.tres"           id="6_sulfur_def"]
 [ext_resource type="Script"       path="res://scripts/ui/upgrade_screen.gd"                     id="7_2n2d0"]
 [ext_resource type="Script"       path="res://scripts/enemies/worm_spawner.gd"                  id="9_a8d2w"]
 [ext_resource type="PackedScene"  path="res://scenes/enemies/worm_enemy.tscn"                   id="10_l4v0u"]
@@ -60,6 +62,8 @@ uranium_large_scene       = ExtResource("6_u_large_scene")
 uranium_small_definition  = ExtResource("6_u_small")
 uranium_medium_definition = ExtResource("6_u_medium")
 uranium_large_definition  = ExtResource("6_u_large")
+sulfur_scene              = ExtResource("6_sulfur_scene")
+sulfur_definition         = ExtResource("6_sulfur_def")
 
 [node name="WormSpawner" type="Node2D" parent="."]
 script = ExtResource("9_a8d2w")
@@ -114,7 +118,7 @@ offset_right = 360.0
 offset_bottom = 126.0
 theme_override_colors/font_color = Color(0.45, 1.0, 0.55, 1)
 theme_override_font_sizes/font_size = 24
-text = "KRISTAL: 0"
+text = "ELMAS: 0"
 
 [node name="MultiplierLabel" type="Label" parent="HUD"]
 offset_left = 20.0

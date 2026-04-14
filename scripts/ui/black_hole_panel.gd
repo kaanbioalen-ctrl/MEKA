@@ -221,11 +221,12 @@ func _build_ui() -> void:
 	_gold_btn.pressed.connect(func(): _convert("gold"))
 	vbox.add_child(gold_row[2])
 
-	# Kristal
-	var crys_row    := _resource_row("💎  Kristal", C_CRYSTAL, "× 20 ⚡  →  Dönüştür")
+	# Elmas
+	var crys_row    := _resource_row("💎  Elmas", C_CRYSTAL, "× 20 ⚡  →  Dönüştür")
 	_crystal_label  = crys_row[0] as Label
 	_crystal_btn    = crys_row[1] as Button
 	_crystal_btn.pressed.connect(func(): _convert("crystal"))
+	_crystal_label.text = "💎  Elmas"
 	vbox.add_child(crys_row[2])
 
 	vbox.add_child(_sep())
@@ -422,12 +423,15 @@ func _refresh_ui() -> void:
 
 	_iron_label.text    = "🪨  Demir        %d  adet" % iron
 	_gold_label.text    = "💛  Altın         %d  adet" % gold
-	_crystal_label.text = "💎  Kristal      %d  adet" % crystal
+	_crystal_label.text = "💎  Elmas        %d  adet" % crystal
 
 	_iron_btn.disabled    = iron    == 0
 	_gold_btn.disabled    = gold    == 0
 	_crystal_btn.disabled = crystal == 0
 	_all_btn.disabled     = (iron + gold + crystal) == 0
+
+	if _crystal_label != null:
+		_crystal_label.text = "💎  Elmas        %d  adet" % crystal
 
 # ─── UI Yardımcıları ──────────────────────────────────────────────────────────
 func _lbl(text: String, size: int, color: Color, align: HorizontalAlignment) -> Label:

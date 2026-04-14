@@ -61,6 +61,10 @@ var _default_collision_mask: int = 0
 var _default_monitoring: bool = true
 var _default_monitorable: bool = true
 
+# ── Yanık izleri ───────────────────────────────────────────────────────────────
+const SCORCH_LIFETIME: float = 7.0
+var _scorch_marks: Array = []   # { pos: Vector2, r: float, life: float, max_life: float }
+
 const HIT_FLASH_DURATION: float = 0.1
 const DEATH_DURATION: float = 0.2
 const HIT_FLASH_BRIGHTNESS_MULT: float = 2.0
@@ -120,6 +124,10 @@ func _physics_process(delta: float) -> void:
 
 	_pulse_t += delta * 1.6
 	_hit_flash_left = maxf(0.0, _hit_flash_left - delta)
+	# Yanık izlerini güncelle
+	for s in _scorch_marks:
+		s["life"] -= delta
+	_scorch_marks = _scorch_marks.filter(func(s): return s["life"] > 0.0)
 	_update_drift_motion(delta)
 	global_position += _get_step_motion(delta)
 	rotation += rotation_speed * delta
@@ -162,6 +170,18 @@ func _draw() -> void:
 			0.95
 		)
 	)
+
+	# Yanık izleri — asteroidin yüzeyinde yanar kalır
+	for s in _scorch_marks:
+		var fade: float = clampf(s["life"] / s["max_life"], 0.0, 1.0)
+		var sr: float   = float(s["r"])
+		var sp: Vector2 = s["pos"]
+		# Dış koyu halka
+		draw_circle(sp, sr * 1.4, Color(0.0, 0.0, 0.0, 0.45 * fade))
+		# Char merkezi
+		draw_circle(sp, sr, Color(0.06, 0.02, 0.00, 0.72 * fade))
+		# Parlak yanmış çekirdek
+		draw_circle(sp, sr * 0.38, Color(0.9, 0.55, 0.10, 0.55 * fade))
 
 	if _is_dev_mode():
 		_draw_dev_overlay()
@@ -246,6 +266,15 @@ func set_player(player_node: Node2D) -> void:
 		_no_progress_time = 0.0
 
 
+func add_scorch_mark(local_pos: Vector2, mark_radius: float) -> void:
+	_scorch_marks.append({
+		"pos":      local_pos,
+		"r":        mark_radius,
+		"life":     SCORCH_LIFETIME,
+		"max_life": SCORCH_LIFETIME
+	})
+
+
 func take_mining_damage(amount: float, is_crit: bool = false) -> void:
 	if _is_dying:
 		return
@@ -259,7 +288,6 @@ func take_mining_damage(amount: float, is_crit: bool = false) -> void:
 		_destroyed_by_player = true
 		_start_death()
 		return
-	_hit_flash_left = HIT_FLASH_DURATION
 
 
 func _spawn_damage_number(amount: float, is_crit: bool) -> void:

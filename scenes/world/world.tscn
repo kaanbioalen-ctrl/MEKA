@@ -116,7 +116,7 @@ offset_right = 360.0
 offset_bottom = 126.0
 theme_override_colors/font_color = Color(0.7, 0.95, 1, 1)
 theme_override_font_sizes/font_size = 24
-text = "KRISTAL: 0"
+text = "ELMAS: 0"
 
 [node name="MultiplierLabel" type="Label" parent="HUD" unique_id=346929384]
 offset_left = 20.0
@@ -408,7 +408,7 @@ text = "Gelistirici
 Cost 0
 +100000 DEMIR
 +100000 ALTIN
-+100000 KRISTAL"
++100000 ELMAS"
 
 [node name="ResourcesLabel" type="Label" parent="UpgradeScreen" unique_id=1800002001]
 offset_left = 32.0
@@ -417,7 +417,7 @@ offset_right = 700.0
 offset_bottom = 260.0
 theme_override_colors/font_color = Color(1, 0.92, 0.55, 1)
 theme_override_font_sizes/font_size = 24
-text = "DEMIR: 0   ALTIN: 0   KRISTAL: 0"
+text = "DEMIR: 0   ALTIN: 0   ELMAS: 0"
 
 [node name="MiningUpgradeButton" type="Button" parent="UpgradeScreen" unique_id=1017671591]
 offset_left = 936.0
