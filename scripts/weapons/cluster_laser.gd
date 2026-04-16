@@ -3,7 +3,7 @@ const UpgradeEffects = preload("res://scripts/upgrades/upgrade_effects.gd")
 ## Küme lazeri — yeşil kıvılcım + buhar efekti, asteroid görseline dokunmaz.
 
 const BASE_LIFETIME:  float = 2.0
-const DAMAGE_PER_SEC: float = 115.0
+const DAMAGE_PER_SEC: float = 11.5
 const SFX_PATH:       String = "res://assets/sfx/cluster_lazer.mp3"
 const SFX_BASE_PITCH_SCALE: float = 1.35
 const SFX_VOLUME_DB: float = -4.0
@@ -41,9 +41,9 @@ const VAPOR_R_START:  float = 2.0
 const VAPOR_R_END:    float = 13.0
 
 # ── Renkler ──────────────────────────────────────────────────────────────────
-const COLOR_P:      Color = Color(0.22, 1.00, 0.42, 1.00)
-const COLOR_BRIGHT: Color = Color(0.70, 1.00, 0.78, 1.00)
-const COLOR_GLOW:   Color = Color(0.05, 0.78, 0.20, 0.10)
+const COLOR_P:      Color = Color(0.68, 0.15, 1.00, 1.00)
+const COLOR_BRIGHT: Color = Color(0.88, 0.72, 1.00, 1.00)
+const COLOR_GLOW:   Color = Color(0.30, 0.05, 0.60, 0.10)
 
 # ── State ────────────────────────────────────────────────────────────────────
 var _barrier:     Node2D  = null
@@ -62,6 +62,14 @@ var _origin_w: Vector2 = Vector2.ZERO
 var _end_w:    Vector2 = Vector2.ZERO
 var _beam_len: float   = 0.0
 var _hitting:  bool    = false   # hedef yüzeye değiyor mu
+
+# ── Sekme (ikinci hedef) ──────────────────────────────────────────────────────
+var _target2:    Node2D  = null
+var _end_w2:     Vector2 = Vector2.ZERO
+var _beam_len2:  float   = 0.0
+var _hitting2:   bool    = false
+var _dmg_acc2:      float   = 0.0
+var _scorch_timer:  float   = 0.0
 
 # {pos, vel, life, max_life, len}
 var _sparks: Array = []
@@ -179,7 +187,7 @@ func _process(delta: float) -> void:
 		queue_free()
 		return
 
-	_origin_w = _barrier.global_position + _origin_dir * _origin_dist
+	_origin_w = _barrier.to_global(_origin_dir * _origin_dist)
 
 	if _target == null or not is_instance_valid(_target) or not _in_cone(_target):
 		_target = _find_best_target(_origin_w)
@@ -194,12 +202,31 @@ func _process(delta: float) -> void:
 	_end_w    = _origin_w + tgt_dir * _beam_len
 	_hitting  = _beam_len > 2.0
 
-	# Hasar
+	# ── Sekme hedefi ─────────────────────────────────────────────────────────
+	var rs := get_node_or_null("/root/RunState")
+	if UpgradeEffects.is_laser_bounce_unlocked(rs):
+		if _target2 == null or not is_instance_valid(_target2) or _target2 == _target \
+				or not _in_cone(_target2) or not _is_on_screen(_target2.global_position):
+			_target2 = _find_second_target(_origin_w, _target)
+		if _target2 != null and is_instance_valid(_target2):
+			var to_tgt2:  Vector2 = _target2.global_position - _origin_w
+			var tgt_dir2: Vector2 = to_tgt2.normalized()
+			var surf_r2:  float   = float(_target2.get("radius")) if _target2.get("radius") != null else 20.0
+			_beam_len2 = maxf(0.0, to_tgt2.length() - surf_r2)
+			_end_w2    = _origin_w + tgt_dir2 * _beam_len2
+			_hitting2  = _beam_len2 > 2.0
+	else:
+		_target2   = null
+		_hitting2  = false
+
+	# ── Hasar ────────────────────────────────────────────────────────────────
 	_dmg_acc += DAMAGE_PER_SEC * delta
 	if _dmg_acc >= 1.0:
 		var dmg: float = floorf(_dmg_acc)
 		_dmg_acc -= dmg
 		_apply_damage(dmg)
+		if _target2 != null and is_instance_valid(_target2):
+			_apply_damage_to(_target2, dmg)
 
 	if _hitting:
 		var beam_dir:  Vector2 = tgt_dir
@@ -241,6 +268,21 @@ func _process(delta: float) -> void:
 				"max_life": vlife,
 			})
 
+	# ── Yanık izi — her 0.07s'de hedef yüzeyine mor iz ──────────────────────
+	_scorch_timer -= delta
+	if _hitting and _scorch_timer <= 0.0:
+		_scorch_timer = 0.07
+		if _target != null and is_instance_valid(_target) and _target.has_method("add_scorch_mark"):
+			var tgt_dir_s: Vector2 = (_end_w - _origin_w).normalized()
+			var local_hit: Vector2 = _target.to_local(_end_w)
+			var local_dir: Vector2 = tgt_dir_s.rotated(-_target.global_rotation)
+			_target.call("add_scorch_mark", local_hit, local_dir, randf_range(2.5, 5.5))
+	if _hitting2 and _target2 != null and is_instance_valid(_target2) and _target2.has_method("add_scorch_mark"):
+		var tgt_dir2_s: Vector2 = (_end_w2 - _origin_w).normalized()
+		var local_hit2: Vector2 = _target2.to_local(_end_w2)
+		var local_dir2: Vector2 = tgt_dir2_s.rotated(-_target2.global_rotation)
+		_target2.call("add_scorch_mark", local_hit2, local_dir2, randf_range(2.5, 5.5))
+
 	# ── Kıvılcım güncelleme ──────────────────────────────────────────────────
 	var i := 0
 	while i < _sparks.size():
@@ -276,11 +318,38 @@ func _in_cone(node: Node2D) -> bool:
 	return _origin_dir.dot(dir) > 0.0
 
 
+func _is_on_screen(world_pos: Vector2) -> bool:
+	var vp := get_viewport()
+	if vp == null:
+		return true
+	var screen_pos := vp.get_canvas_transform() * world_pos
+	return vp.get_visible_rect().has_point(screen_pos)
+
+
 func _find_best_target(from: Vector2) -> Node2D:
 	var best_dist: float = INF
 	var best: Node2D = null
 	for node in get_tree().get_nodes_in_group("asteroid"):
 		if not is_instance_valid(node): continue
+		if node.has_method("is_player_friendly") and bool(node.call("is_player_friendly")): continue
+		if not _is_on_screen(node.global_position): continue
+		var dir: Vector2 = (node.global_position - from).normalized()
+		if _origin_dir.dot(dir) <= 0.0: continue
+		var d: float = node.global_position.distance_to(from)
+		if d < best_dist:
+			best_dist = d
+			best      = node
+	return best
+
+
+func _find_second_target(from: Vector2, exclude: Node2D) -> Node2D:
+	var best_dist: float = INF
+	var best: Node2D = null
+	for node in get_tree().get_nodes_in_group("asteroid"):
+		if not is_instance_valid(node): continue
+		if node == exclude: continue
+		if node.has_method("is_player_friendly") and bool(node.call("is_player_friendly")): continue
+		if not _is_on_screen(node.global_position): continue
 		var dir: Vector2 = (node.global_position - from).normalized()
 		if _origin_dir.dot(dir) <= 0.0: continue
 		var d: float = node.global_position.distance_to(from)
@@ -292,10 +361,20 @@ func _find_best_target(from: Vector2) -> Node2D:
 
 func _apply_damage(amount: float) -> void:
 	if _target == null or not is_instance_valid(_target): return
+	if _target.has_method("is_player_friendly") and bool(_target.call("is_player_friendly")): return
 	if _target.has_method("take_mining_damage"):
 		_target.call("take_mining_damage", amount, false)
 	elif _target.has_method("take_damage"):
 		_target.call("take_damage", amount)
+
+
+func _apply_damage_to(target: Node2D, amount: float) -> void:
+	if target == null or not is_instance_valid(target): return
+	if target.has_method("is_player_friendly") and bool(target.call("is_player_friendly")): return
+	if target.has_method("take_mining_damage"):
+		target.call("take_mining_damage", amount, false)
+	elif target.has_method("take_damage"):
+		target.call("take_damage", amount)
 
 
 func _on_sfx_finished() -> void:
@@ -400,3 +479,52 @@ func _draw() -> void:
 		if t > 0.55:
 			draw_circle(sp_pos, 1.0 * t,
 				Color(COLOR_BRIGHT.r, COLOR_BRIGHT.g, COLOR_BRIGHT.b, sp_alpha * 0.70))
+
+	# ── Sekme lazeri (ikinci hedef) ───────────────────────────────────────────
+	if _hitting2 and _target2 != null and is_instance_valid(_target2):
+		var s2:    Vector2 = _origin_w
+		var e2:    Vector2 = _end_w2
+		var dir2:  Vector2 = (e2 - s2).normalized()
+		var perp2: Vector2 = Vector2(-dir2.y, dir2.x)
+		var a2:    float   = global_alpha * 0.70   # ikinci ışın biraz daha sönük
+
+		# Dış sis
+		draw_line(s2, e2,
+			Color(COLOR_GLOW.r, COLOR_GLOW.g, COLOR_GLOW.b, COLOR_GLOW.a * a2),
+			2.0, true)
+		# Zemin çizgi partikülleri
+		for i in P_COUNT:
+			var lat:   float = float(_p_lat[i]) * P_SPREAD
+			var ph:    float = float(_p_phase[i])
+			var p_len: float = float(_p_len[i]) * _beam_len2
+			var p_w:   float = float(_p_width[i])
+			var flicker: float = sin(_time * 26.0 + ph + 1.3) * 0.20 + \
+								 sin(_time * 49.0 + ph * 1.8 + 2.1) * 0.08 + 0.72
+			var alpha2: float = flicker * a2
+			var center_boost: float = 1.0 - absf(float(_p_lat[i])) * 0.55
+			var p_s2: Vector2 = s2 + perp2 * lat * 0.12
+			var p_e2: Vector2 = s2 + dir2 * p_len + perp2 * lat
+			draw_line(p_s2, p_e2,
+				Color(COLOR_P.r, COLOR_P.g, COLOR_P.b, alpha2 * center_boost),
+				p_w, true)
+		# Akan enerji noktaları
+		for i in FLOW_COUNT:
+			var t2: float = fmod(float(_flow_offset[i]) + _time * FLOW_SPEED + 0.5, 1.0)
+			var pos2: Vector2 = s2.lerp(e2, t2) + perp2 * float(_flow_lat[i])
+			var size_t2: float = sin(t2 * PI)
+			var r2: float = float(_flow_r[i]) * size_t2
+			if r2 < 0.15: continue
+			var flow_alpha2: float = size_t2 * a2
+			draw_circle(pos2, r2 * 2.2,
+				Color(COLOR_P.r, COLOR_P.g, COLOR_P.b, flow_alpha2 * 0.20))
+			draw_circle(pos2, r2,
+				Color(COLOR_P.r, COLOR_P.g, COLOR_P.b, flow_alpha2 * 0.85))
+			draw_circle(pos2, r2 * 0.38,
+				Color(COLOR_BRIGHT.r, COLOR_BRIGHT.g, COLOR_BRIGHT.b, flow_alpha2 * 0.95))
+		# Kaynak nokta (birinci ile paylaşılır, tekrar çizme)
+		# İkinci hedef parlaması
+		var hit_pulse2: float = sin(_time * 18.0 + 1.0) * 0.25 + 0.75
+		draw_circle(e2, 4.5 * hit_pulse2,
+			Color(COLOR_P.r, COLOR_P.g, COLOR_P.b, 0.20 * a2))
+		draw_circle(e2, 2.0,
+			Color(COLOR_BRIGHT.r, COLOR_BRIGHT.g, COLOR_BRIGHT.b, 0.70 * a2))

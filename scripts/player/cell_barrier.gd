@@ -1,4 +1,4 @@
-extends Node2D
+﻿extends Node2D
 ## Biyolojik hücre zarı — canlı silia sistemi.
 ## Metakronal dalga + asimetrik vuruş + nefes + piyano tepkisi + kümeleme + lazer.
 
@@ -11,20 +11,20 @@ const MEMBRANE_RADIUS:   float = 20.0
 const MEMBRANE_SEGMENTS: int   = 80
 
 # ── Diken ──────────────────────────────────────────────────────────────────────
-const SPINE_COUNT:    int   = 60
-const SPINE_LEN_BASE: float = 5.5
-const SPINE_LEN_VAR:  float = 2.5
-const SPINE_WIDTH:    float = 0.65
+const SPINE_COUNT:    int   = 40     # netlik için azaltıldı — aralarında temiz boşluk
+const SPINE_LEN_BASE: float = 8.25
+const SPINE_LEN_VAR:  float = 3.75
+const SPINE_WIDTH:    float = 1.60   # taban genişliği — Bezier ile uçta sıfıra yaklaşır
 
 # ── Hareket — metakronal silia dinamiği ───────────────────────────────────────
-const WAVE_FREQ:      float = 2.6    # temel vuruş frekansı (Hz)
-const METACHRONAL_K:  float = 3.8    # seyahat eden dalga — faz / tam tur (radyan)
-const WAVE_LAT:       float = 1.15   # yanal salınım genliği
-const IDLE_RADIAL:    float = 0.45   # radyal nabız genliği
-const BEND_SPEED:     float = 5.0    # hız yanıtı katsayısı
-const FLUTTER_FREQ:   float = 16.0   # uç titremi frekansı
-const FLUTTER_AMP:    float = 0.20   # uç titremi genliği
-const CURVE_MID:      float = 0.38   # orta nokta yanal eğri katsayısı
+const WAVE_FREQ:      float = 2.6
+const METACHRONAL_K:  float = 3.8
+const WAVE_LAT:       float = 1.75   # zarif yanal sallantı
+const IDLE_RADIAL:    float = 0.50
+const BEND_SPEED:     float = 7.0
+const FLUTTER_FREQ:   float = 16.0
+const FLUTTER_AMP:    float = 0.22   # uç titremi — ince ve kontrolsüz değil
+const CURVE_MID:      float = 0.46
 
 # ── Global modülatörler ────────────────────────────────────────────────────────
 const BREATHE_FREQ:   float = 0.30   # nefes frekansı (Hz)
@@ -55,10 +55,15 @@ const CLUSTER_TIP_REACH:   float = 1.20
 const MAX_CLUSTERS:        int   = 3
 
 # ── Renk ──────────────────────────────────────────────────────────────────────
-const COLOR:         Color = Color(0.18, 0.06, 0.24, 0.86)
+const COLOR:         Color = Color(0.24, 0.08, 0.38, 0.88)
 const COLOR_DARK:    Color = Color(0.03, 0.01, 0.07, 0.96)
-const COLOR_HILITE:  Color = Color(0.34, 0.18, 0.42, 0.72)
-const COLOR_CLUSTER: Color = Color(0.00, 1.00, 0.00, 0.92)
+const COLOR_HILITE:  Color = Color(0.52, 0.22, 0.75, 0.72)
+const COLOR_CLUSTER: Color = Color(0.80, 0.12, 1.00, 0.92)
+const COLOR_GRAB:    Color = Color(0.62, 0.12, 0.98, 0.92)
+
+# ── Tutma (grab) ─────────────────────────────────────────────────────────────
+const GRAB_SPINE_COUNT: int   = 4
+const GRAB_CONV_SPEED:  float = 1.8
 
 # ── Precomputed ────────────────────────────────────────────────────────────────
 var _spine_len:    PackedFloat32Array
@@ -77,9 +82,20 @@ var _retract_groups:  Array = []
 var _spine_retract_t: PackedFloat32Array
 var _spine_push:      PackedFloat32Array
 
-var _time:       float   = 0.0
-var _player_vel: Vector2 = Vector2.ZERO
-var _speed:      float   = 0.0
+var _time:             float   = 0.0
+var _player_vel:       Vector2 = Vector2.ZERO
+var _speed:            float   = 0.0
+var _last_spawn_angle: float   = 0.0   # son spawned kümenin açısı (çift küme için)
+
+# ── Tutma (grab) — runtime state ─────────────────────────────────────────────
+var _grab_target:     Node2D         = null
+var _grab_conv_t:     float          = 0.0
+var _grab_wobble_t:   float          = 0.0
+# _grab_spine_mask[i] = k+1 (1-based slot) — hangi spine grab, O(1) lookup
+var _grab_spine_mask: PackedByteArray = PackedByteArray()
+# _grab_pts[k] = grab silia k'nın bu frame'deki hedef noktası (local space)
+# _process'te hesaplanır, _draw sadece okur
+var _grab_pts:        Array          = []
 
 
 func _ready() -> void:
@@ -102,6 +118,9 @@ func _ready() -> void:
 		_spine_cluster_conv.append(Vector2.ZERO)
 	_spine_retract_t.resize(SPINE_COUNT)
 	_spine_push.resize(SPINE_COUNT)
+	_grab_spine_mask.resize(SPINE_COUNT)
+	for _gi in SPINE_COUNT:
+		_grab_spine_mask[_gi] = 0
 
 	for i in SPINE_COUNT:
 		var smooth: float = (
@@ -143,6 +162,8 @@ func _process(delta: float) -> void:
 
 	_update_retract_groups(delta)
 	_update_clusters(delta)
+	if _grab_spine_mask.size() == SPINE_COUNT:
+		_update_grab(delta)
 	queue_redraw()
 
 
@@ -195,8 +216,16 @@ func _update_retract_groups(delta: float) -> void:
 func _update_clusters(delta: float) -> void:
 	_cluster_timer -= delta
 	if _cluster_timer <= 0.0 and _clusters.size() < MAX_CLUSTERS:
-		_spawn_cluster()
-		_cluster_timer = CLUSTER_INTERVAL + randf_range(-0.8, 0.8)
+		if _spawn_cluster():
+			_cluster_timer = CLUSTER_INTERVAL + randf_range(-0.8, 0.8)
+			# Çift küme ihtimali — karşı duvarda eşzamanlı ikinci küme
+			var rs := get_node_or_null("/root/RunState")
+			var chance: float = UpgradeEffects.get_dual_laser_chance(rs)
+			if chance > 0.0 and randf() < chance and _clusters.size() < MAX_CLUSTERS:
+				var opp_angle: float = _last_spawn_angle + PI + randf_range(-0.4, 0.4)
+				_spawn_cluster_at_angle(opp_angle)
+		else:
+			_cluster_timer = CLUSTER_INTERVAL + randf_range(-0.8, 0.8)
 
 	for c in _clusters:
 		c["timer"] += delta
@@ -223,24 +252,32 @@ func _update_clusters(delta: float) -> void:
 
 
 func _spawn_cluster() -> bool:
-	var size: int = randi_range(CLUSTER_SIZE_MIN, CLUSTER_SIZE_MAX)
-
-	# En yakın asteroide bak — ona yönelen spine'ı merkez al (turret mantığı)
+	# En yakın düşman asteroide bak — grabbed/orbit/launched atlanır
 	var best_angle: float = randf() * TAU   # asteroid yoksa rastgele
 	var best_dist:  float = INF
 	for node in get_tree().get_nodes_in_group("asteroid"):
 		if not is_instance_valid(node):
 			continue
+		if node.has_method("is_player_friendly") and bool(node.call("is_player_friendly")):
+			continue
 		var d: float = node.global_position.distance_to(global_position)
 		if d < best_dist:
 			best_dist  = d
 			best_angle = (node.global_position - global_position).angle()
+	_last_spawn_angle = best_angle
+	return _spawn_cluster_at_angle(best_angle)
 
-	# best_angle'a en yakın spine indeksini bul
-	var best_idx: int   = 0
+
+# Verilen açıya en yakın spine grubunda küme oluştur.
+# Çift küme ihtimali için de kullanılır — görsel tamamen aynıdır.
+func _spawn_cluster_at_angle(target_angle: float) -> bool:
+	var size: int = randi_range(CLUSTER_SIZE_MIN, CLUSTER_SIZE_MAX)
+
+	# target_angle'a en yakın spine indeksini bul
+	var best_idx: int    = 0
 	var best_diff: float = INF
 	for i in SPINE_COUNT:
-		var diff: float = absf(angle_difference(float(_spine_angle[i]), best_angle))
+		var diff: float = absf(angle_difference(float(_spine_angle[i]), target_angle))
 		if diff < best_diff:
 			best_diff = diff
 			best_idx  = i
@@ -297,6 +334,62 @@ func _spawn_cluster_laser_from_local(apex_local: Vector2) -> void:
 	laser.setup(self, apex_local)
 
 
+# ── Grab ─────────────────────────────────────────────────────────────────────
+
+func set_grab_target(target: Node2D) -> void:
+	_grab_target = target
+	# Mask sıfırla
+	for _mi in SPINE_COUNT:
+		_grab_spine_mask[_mi] = 0
+	_grab_pts = []
+	if target == null:
+		return
+	# Hedef yönüne 90° aralıklı 4 spine seç
+	var to_tgt: Vector2 = target.global_position - global_position
+	var base_ang: float = to_tgt.angle()
+	var used: Array = []
+	for k in GRAB_SPINE_COUNT:
+		var tgt_ang: float   = base_ang + float(k) * (TAU / float(GRAB_SPINE_COUNT))
+		var best_idx: int    = 0
+		var best_diff: float = INF
+		for si in SPINE_COUNT:
+			if used.has(si):
+				continue
+			var diff: float = absf(angle_difference(float(_spine_angle[si]), tgt_ang))
+			if diff < best_diff:
+				best_diff = diff
+				best_idx  = si
+		used.append(best_idx)
+		_grab_spine_mask[best_idx] = k + 1   # 1-based slot
+	_grab_conv_t = 0.0
+
+
+func _update_grab(delta: float) -> void:
+	_grab_wobble_t += delta
+	if _grab_target == null or not is_instance_valid(_grab_target):
+		_grab_conv_t = maxf(0.0, _grab_conv_t - delta * GRAB_CONV_SPEED * 2.0)
+		if _grab_conv_t <= 0.001 and _grab_pts.size() > 0:
+			_grab_pts.resize(0)
+		return
+	_grab_conv_t = minf(1.0, _grab_conv_t + delta * GRAB_CONV_SPEED)
+	# Grab noktalarını _process'te hesapla — _draw'da transform işlemi yok
+	var ast_local: Vector2 = to_local(_grab_target.global_position)
+	var canvas_s: float    = maxf(0.001, global_transform.get_scale().x)
+	var local_r: float     = 24.0
+	var r_var: Variant     = _grab_target.get("radius")
+	if r_var != null:
+		local_r = float(r_var) / canvas_s
+	var ast_ang: float = ast_local.angle() if ast_local.length_squared() > 0.001 else 0.0
+	# Sabit 4 eleman — resize ile alloc sadece ilk frame'de
+	if _grab_pts.size() != GRAB_SPINE_COUNT:
+		_grab_pts.resize(GRAB_SPINE_COUNT)
+	for k in GRAB_SPINE_COUNT:
+		var gofs: float     = float(k) * (TAU / float(GRAB_SPINE_COUNT))
+		var grab_ang: float = ast_ang + PI + gofs
+		var wobble: float   = sin(_grab_wobble_t * 3.8 + float(k) * 1.57) * 1.8
+		_grab_pts[k]        = ast_local + Vector2(cos(grab_ang), sin(grab_ang)) * (local_r + wobble)
+
+
 # ── Küme üçgeni çizimi ────────────────────────────────────────────────────────
 
 func _draw_cluster_triangles() -> void:
@@ -333,8 +426,8 @@ func _draw_cluster_triangles() -> void:
 		draw_line(base_l, base_r, Color(COLOR_CLUSTER.r, COLOR_CLUSTER.g, COLOR_CLUSTER.b, ea * 0.55), 0.5, true)
 
 		# Parlak iç kenar
-		draw_line(apex, base_l, Color(0.80, 1.0, 0.84, op * 0.58 * pulse), 0.25, true)
-		draw_line(apex, base_r, Color(0.80, 1.0, 0.84, op * 0.58 * pulse), 0.25, true)
+		draw_line(apex, base_l, Color(0.90, 0.80, 1.00, op * 0.58 * pulse), 0.25, true)
+		draw_line(apex, base_r, Color(0.90, 0.80, 1.00, op * 0.58 * pulse), 0.25, true)
 
 
 
@@ -365,9 +458,6 @@ func _draw_spines() -> void:
 	# Global modülatörler — her frame tek hesap
 	var breathe: float = sin(_time * BREATHE_FREQ * TAU) * BREATHE_AMP
 	var energy: float  = 0.60 + 0.40 * sin(_time * ENERGY_FREQ * TAU)   # 0.2 .. 1.0
-
-	var pts3: PackedVector2Array = PackedVector2Array()
-	pts3.resize(3)
 
 	for i in SPINE_COUNT:
 		var base_angle: float = float(_spine_angle[i])
@@ -412,44 +502,59 @@ func _draw_spines() -> void:
 		var flutter: float = sin(_time * FLUTTER_FREQ + float(_spine_phase[i]) * 4.1) * \
 							 FLUTTER_AMP * energy * retract_scale
 
-		# ── Silia ────────────────────────────────────────────────────────────
-		var mid_pt: Vector2 = base_pt + outward * length * 0.58 + tangent * (lat * CURVE_MID)
+		# ── Silia ── kubik Bezier, taban kalin, uc sivri ────
 		var tip_pt: Vector2 = base_pt + outward * length + tangent * lat + tangent * flutter
 
 		var ph:  float = float(_spine_phase[i])
 		var lph: float = float(_spine_lat_ph[i])
 		var dark_t: float = (sin(_time * 0.52 + ph * 1.7) * 0.5 + 0.5) * \
-							(sin(_time * 0.21 + lph) * 0.5 + 0.5)
+					(sin(_time * 0.21 + lph) * 0.5 + 0.5)
 		dark_t = dark_t * dark_t * 0.55
 		var bright_t: float = maxf(0.0, stroke) * 0.20 * energy
 		var col: Color = COLOR.lerp(COLOR_DARK, dark_t)
 		col.a = clampf(col.a + bright_t, 0.0, 1.0)
+		var core_mix: Color = col.lerp(COLOR_HILITE, 0.55)
+		var core_alpha: float = clampf(col.a * 0.42 + bright_t, 0.0, 1.0)
 
-		# Küme geometrisi
+		# Kume uc cekimi
 		var cl_t: float = _spine_cluster_t[i]
 		if cl_t > 0.001:
-			var conv: Vector2 = _spine_cluster_conv[i]
-			tip_pt = tip_pt.lerp(conv, cl_t)
-			mid_pt = base_pt.lerp(tip_pt, 0.55)
+			tip_pt = tip_pt.lerp(_spine_cluster_conv[i], cl_t)
 
-		pts3[0] = base_pt
-		pts3[1] = mid_pt
-		pts3[2] = tip_pt
+		# ── Grab — _process'te hesaplanan noktaları okur, O(1) ──────────────
+		var gslot: int    = int(_grab_spine_mask[i]) - 1   # -1 = grab değil
+		var is_grab: bool = gslot >= 0 and _grab_conv_t > 0.001 and gslot < _grab_pts.size()
+		if is_grab:
+			var grab_pt: Vector2 = _grab_pts[gslot]
+			tip_pt = tip_pt.lerp(grab_pt, _grab_conv_t * _grab_conv_t)
+			var gt2: float = _grab_conv_t * _grab_conv_t
+			col        = col.lerp(COLOR_GRAB, gt2)
+			core_mix   = col.lerp(Color(0.92, 0.80, 1.00), 0.60)
+			core_alpha = clampf(col.a * 0.55, 0.0, 1.0)
 
-		# Glow aura — arka plan yumuşak hale (gövde tam, uç yarı glow)
-		var glow_col: Color = Color(col.r, col.g, col.b, col.a * 0.22)
-		draw_line(base_pt, mid_pt, glow_col, SPINE_WIDTH * 2.8, true)
-		draw_line(mid_pt, tip_pt, glow_col, SPINE_WIDTH * 1.0, true)
-		# Ana silia — gövde tam genişlik, uç ince (keskin)
-		draw_line(base_pt, mid_pt, col, SPINE_WIDTH, true)
-		draw_line(mid_pt, tip_pt, col, SPINE_WIDTH * 0.30, true)
-		# İnce parlak çekirdek — uçta daha da ince
-		var core_mix: Color = col.lerp(COLOR_HILITE, 0.55)
-		var core_col: Color = Color(core_mix.r, core_mix.g, core_mix.b,
-								   clampf(col.a * 0.42 + bright_t, 0.0, 1.0))
-		draw_line(base_pt, mid_pt, core_col, SPINE_WIDTH * 0.25, true)
-		draw_line(mid_pt, tip_pt, core_col, SPINE_WIDTH * 0.10, true)
+		# Kubik Bezier kontrol noktalari:
+		#   p0->p1: membrana dik cikis,  p2->p3: yanal uzanim
+		var p0: Vector2 = base_pt
+		var p1: Vector2 = base_pt + outward * length * 0.28
+		var p2: Vector2 = base_pt + outward * length * 0.64 + tangent * lat * 0.48
+		var p3: Vector2 = tip_pt
 
+		# 5 segmentli ornekleme -- pow ile yumusak konik incelme
+		var seg_prev: Vector2 = p0
+		for seg_i in 5:
+			var t1: float    = float(seg_i + 1) / 5.0
+			var t_mid: float = (float(seg_i) + 0.5) / 5.0
+			var mt1: float   = 1.0 - t1
+			var seg_pt: Vector2 = mt1*mt1*mt1*p0 + 3.0*mt1*mt1*t1*p1 + \
+					3.0*mt1*t1*t1*p2 + t1*t1*t1*p3
+			# Konik genislik: 1.6 -> ~0.06
+			var w: float = maxf(SPINE_WIDTH * pow(1.0 - t_mid, 1.80), 0.06)
+			draw_line(seg_prev, seg_pt,
+				Color(col.r, col.g, col.b, col.a * 0.16), w * 2.2, true)
+			draw_line(seg_prev, seg_pt, col, w, true)
+			draw_line(seg_prev, seg_pt,
+				Color(core_mix.r, core_mix.g, core_mix.b, core_alpha * 0.30), w * 0.18, true)
+			seg_prev = seg_pt
 		# ── Enerji damarı ─────────────────────────────────────────────────────
 		if cl_t > 0.001:
 			var sd: Vector2   = (tip_pt - base_pt).normalized()
@@ -470,7 +575,7 @@ func _draw_spines() -> void:
 				0.38, true)
 			# Parlak çekirdek
 			draw_line(base_pt, vend,
-				Color(0.82, 1.00, 0.86, op * 0.70),
+				Color(0.90, 0.82, 1.00, op * 0.70),
 				0.15, true)
 			# Yan damar
 			draw_line(base_pt + perp * 0.5, vend + perp * 0.5,

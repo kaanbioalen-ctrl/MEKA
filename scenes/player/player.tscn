@@ -26,6 +26,7 @@ script = ExtResource("1_ym5k2")
 groups = ["Player", "player"]
 
 [node name="VisualRoot" type="Node2D" parent="."]
+scale = Vector2(1.25, 1.25)
 
 [node name="OuterGlow" type="Node2D" parent="VisualRoot"]
 material = SubResource("CanvasItemMaterial_nsh8h")

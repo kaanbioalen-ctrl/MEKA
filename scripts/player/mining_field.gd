@@ -7,8 +7,8 @@ class_name MiningField
 @export var radius: float = 160.0
 @export var pickup_radius: float = 28.0
 @export var attract_acceleration: float = 133.4
-@export var base_speed: float = 80.0
-@export var max_speed: float = 1000.0
+@export var base_speed: float = 160.0
+@export var max_speed: float = 2000.0
 @export var settle_time: float = 0.08
 @export var scan_interval: float = 0.20
 @export_range(0.0, 100.0, 0.1, "suffix:%") var energy_percent_gain: float = 2.0

@@ -57,12 +57,14 @@ var _launch_damage: float = 0.0
 var _launch_lifetime_left: float = 0.0
 var _orbit_reentry_cooldown_left: float = 0.0
 var _orbit_contact_damage_cooldown_left: float = 0.0
+var _is_grabbed: bool = false
 var _default_collision_mask: int = 0
 var _default_monitoring: bool = true
 var _default_monitorable: bool = true
 
 # ── Yanık izleri ───────────────────────────────────────────────────────────────
-const SCORCH_LIFETIME: float = 7.0
+const SCORCH_LIFETIME: float = 300.0   # kalıcı — oyun süresi boyunca kaybolmaz
+const SCORCH_MAX:      int   = 25      # asteroid başına maksimum iz sayısı
 var _scorch_marks: Array = []   # { pos: Vector2, r: float, life: float, max_life: float }
 
 const HIT_FLASH_DURATION: float = 0.1
@@ -128,6 +130,13 @@ func _physics_process(delta: float) -> void:
 	for s in _scorch_marks:
 		s["life"] -= delta
 	_scorch_marks = _scorch_marks.filter(func(s): return s["life"] > 0.0)
+	_handle_asteroid_collisions()
+	if _is_grabbed:
+		global_position += velocity * delta
+		rotation        += rotation_speed * delta
+		_wrap_in_bounds()
+		queue_redraw()
+		return
 	_update_drift_motion(delta)
 	global_position += _get_step_motion(delta)
 	rotation += rotation_speed * delta
@@ -171,17 +180,25 @@ func _draw() -> void:
 		)
 	)
 
-	# Yanık izleri — asteroidin yüzeyinde yanar kalır
+	# Yanık izleri — lazerin geldiği yönde mor çizgi, asteroidin yüzeyine kazınmış
 	for s in _scorch_marks:
-		var fade: float = clampf(s["life"] / s["max_life"], 0.0, 1.0)
-		var sr: float   = float(s["r"])
-		var sp: Vector2 = s["pos"]
-		# Dış koyu halka
-		draw_circle(sp, sr * 1.4, Color(0.0, 0.0, 0.0, 0.45 * fade))
-		# Char merkezi
-		draw_circle(sp, sr, Color(0.06, 0.02, 0.00, 0.72 * fade))
-		# Parlak yanmış çekirdek
-		draw_circle(sp, sr * 0.38, Color(0.9, 0.55, 0.10, 0.55 * fade))
+		var fade: float  = clampf(s["life"] / s["max_life"], 0.0, 1.0)
+		var sp: Vector2  = s["pos"]
+		var sd: Vector2  = s["dir"]
+		var sr: float    = float(s["r"])
+		var slen: float  = float(s["len"])
+		var ep: Vector2  = sp + sd * slen   # çizginin ucu (lazer yönünde)
+
+		# Dış glow — çizgi boyunca yayılan koyu mor hale
+		draw_line(sp, ep, Color(0.06, 0.00, 0.12, 0.32 * fade), sr * 2.8, true)
+		# Ana yanık çizgisi — derin viyole-siyah
+		draw_line(sp, ep, Color(0.10, 0.01, 0.18, 0.88 * fade), sr,       true)
+		# Parlak viyole çekirdek çizgisi
+		draw_line(sp, ep, Color(0.52, 0.08, 0.78, 0.48 * fade), sr * 0.32, true)
+		# Çarpma noktası — en parlak, en yüksek sıcaklık
+		draw_circle(sp, sr * 0.85, Color(0.10, 0.01, 0.18, 0.90 * fade))
+		draw_circle(sp, sr * 0.42, Color(0.55, 0.10, 0.82, 0.62 * fade))
+		draw_circle(sp, sr * 0.16, Color(0.88, 0.72, 1.00, 0.55 * fade))
 
 	if _is_dev_mode():
 		_draw_dev_overlay()
@@ -266,10 +283,41 @@ func set_player(player_node: Node2D) -> void:
 		_no_progress_time = 0.0
 
 
-func add_scorch_mark(local_pos: Vector2, mark_radius: float) -> void:
+func set_grabbed(value: bool) -> void:
+	_is_grabbed = value
+	if not value and velocity.length_squared() < 1.0:
+		# Spring sönümü sıfıra indirdiyse temel hızla rastgele yön ver
+		velocity = Vector2.RIGHT.rotated(randf() * TAU) * speed
+
+
+func apply_grab_pull(player_pos: Vector2, hold_radius: float, delta: float) -> void:
+	if _is_dying:
+		return
+	var to_ast: Vector2     = global_position - player_pos
+	var dist: float         = to_ast.length()
+	if dist < 0.001:
+		return
+	var dir: Vector2        = to_ast / dist
+	var target_p: Vector2   = player_pos + dir * hold_radius
+	velocity               += (target_p - global_position) * 9.0 * delta
+	velocity               *= pow(0.82, 60.0 * delta)
+	velocity                = velocity.limit_length(400.0)
+
+
+## Lazer yanık izi ekler.
+## local_pos  — asteroid local uzayında çarpma noktası
+## local_dir  — asteroid local uzayında lazerin seyahat yönü (normalize)
+## mark_radius — çizginin yarı-genişliği
+func add_scorch_mark(local_pos: Vector2, local_dir: Vector2, mark_radius: float) -> void:
+	if _is_dying:
+		return
+	if _scorch_marks.size() >= SCORCH_MAX:
+		_scorch_marks.pop_front()
 	_scorch_marks.append({
 		"pos":      local_pos,
+		"dir":      local_dir.normalized() if local_dir.length_squared() > 0.0001 else Vector2.RIGHT,
 		"r":        mark_radius,
+		"len":      mark_radius * randf_range(3.0, 5.5),   # çizginin uzunluğu
 		"life":     SCORCH_LIFETIME,
 		"max_life": SCORCH_LIFETIME
 	})
@@ -277,6 +325,8 @@ func add_scorch_mark(local_pos: Vector2, mark_radius: float) -> void:
 
 func take_mining_damage(amount: float, is_crit: bool = false) -> void:
 	if _is_dying:
+		return
+	if _is_grabbed:
 		return
 	if _orbit_state == OrbitState.ORBITING:
 		return
@@ -383,10 +433,14 @@ func launch_from_orbit(origin: Vector2, force: float, damage: float, player_velo
 
 
 func is_player_friendly() -> bool:
-	return _orbit_state == OrbitState.ORBITING or (_orbit_state == OrbitState.LAUNCHED and _launched_by_player)
+	return _is_grabbed \
+		or _orbit_state == OrbitState.ORBITING \
+		or (_orbit_state == OrbitState.LAUNCHED and _launched_by_player)
 
 
 func mining_pull_to(target_pos: Vector2, field_radius: float, accel: float, max_pull_speed: float, delta: float) -> void:
+	if _is_grabbed:
+		return
 	_apply_field_pull(
 		target_pos,
 		field_radius,
@@ -416,6 +470,77 @@ func apply_storm_pull(target_pos: Vector2, field_radius: float, pull_strength: f
 		maxf(0.1, magnetic_resistance * 0.9),
 		delta
 	)
+
+
+## Karadelik yörünge çekimi — üç bölgeli davranış:
+##   Uzak    (pull_zone → bh_radius×3.5): hafif radyal çekilme
+##   Orbital (bh_radius×3.5 → ×1.3)    : görsel dairesel alanla örtüşür,
+##                                         asteroid hızlanır ve yuvarlak çizer
+##   Donma   (bh_radius×1.3 → ×0.40)   : hız söner, event horizon'a düşer
+func apply_black_hole_pull(bh_pos: Vector2, bh_radius: float, pull_zone: float, pull_strength: float, max_pull_speed: float, delta: float) -> void:
+	if _is_dying:
+		return
+	var to_bh := bh_pos - global_position
+	var dist  := to_bh.length()
+	if dist <= 0.001:
+		return
+
+	var radial := to_bh.normalized()
+
+	var orbital_zone := bh_radius * 3.5  # yuvarlak hareket başlar
+	var freeze_zone  := bh_radius * 1.3  # donma başlar
+
+	# ── Uzak bölge: hafif çekilme ──────────────────────────────────────────────
+	if dist > orbital_zone:
+		if dist > pull_zone:
+			return
+		var t := 1.0 - clampf((dist - orbital_zone) / maxf(pull_zone - orbital_zone, 1.0), 0.0, 1.0)
+		velocity += radial * pull_strength * 0.12 * t * delta
+		velocity  = velocity.limit_length(maxf(max_pull_speed * 0.25, speed))
+		return
+
+	# ── Yörünge yönü ──────────────────────────────────────────────────────────
+	var orb_sign: float
+	if velocity.length_squared() > 1.0:
+		orb_sign = signf(velocity.cross(radial))
+		if is_zero_approx(orb_sign):
+			orb_sign = 1.0 if sin(_wobble_phase) >= 0.0 else -1.0
+	else:
+		orb_sign = 1.0 if sin(_wobble_phase) >= 0.0 else -1.0
+	var tangent := Vector2(-radial.y, radial.x) * orb_sign
+
+	# ── Orbital/Akresyon bölgesi: hızlanarak yuvarlak çizer ───────────────────
+	if dist > freeze_zone:
+		# t: 0 = orbital_zone kenarı (uzak), 1 = freeze_zone kenarı (yakın)
+		var t := 1.0 - clampf((dist - freeze_zone) / maxf(orbital_zone - freeze_zone, 1.0), 0.0, 1.0)
+
+		# Hedef yörünge hızı: yaklaştıkça artar (akresyon diski dinamiği)
+		var orbital_speed := sqrt(maxf(0.0, pull_strength * dist)) * lerpf(0.5, 1.6, t)
+		orbital_speed = clampf(orbital_speed, speed * 0.8, max_pull_speed * 0.95)
+
+		# Mevcut teğetsel hızı hedef yörünge hızına çek
+		var tangential_now        := velocity.dot(tangent)
+		var tangential_correction := (orbital_speed - tangential_now) * lerpf(4.0, 10.0, t)
+
+		# İçe spiral: uzakta çok az, yaklaşınca belirginleşir
+		var inward_accel := pull_strength * lerpf(0.08, 0.6, t)
+
+		velocity += tangent * tangential_correction * delta
+		velocity += radial  * inward_accel          * delta
+		velocity  = velocity.limit_length(max_pull_speed)
+		return
+
+	# ── Donma bölgesi: hız söner, event horizon'a düşer ──────────────────────
+	# freeze_t: 0 = freeze_zone kenarı, 1 = event horizon
+	var eh       := bh_radius * 0.40
+	var freeze_t := 1.0 - clampf((dist - eh) / maxf(freeze_zone - eh, 1.0), 0.0, 1.0)
+
+	# Hızı söndür — freeze_t arttıkça daha sert damping
+	var damp := clampf(delta * lerpf(4.0, 18.0, freeze_t), 0.0, 1.0)
+	velocity  = velocity.lerp(Vector2.ZERO, damp)
+
+	# Küçük ama tutarlı içe itme → event horizon'a ulaştırır
+	velocity += radial * pull_strength * 0.4 * delta
 
 
 func apply_storm_flow(flow_direction: Vector2, speed_multiplier: float, drift_noise: float, intensity: float, delta: float) -> void:
@@ -497,15 +622,17 @@ func _get_pickup_commit_distance() -> float:
 func _update_drift_motion(delta: float) -> void:
 	if velocity.length_squared() <= 0.0001:
 		return
+	# Uzay fiziği: hız asla düşmez, ama yükselebilir (momentum korunur).
+	var effective_speed: float = maxf(velocity.length(), speed)
 	if drift_variation <= 0.0 or drift_frequency <= 0.0:
-		velocity = velocity.normalized() * speed
+		velocity = velocity.normalized() * effective_speed
 		return
 
 	var current_dir := velocity.normalized()
 	var offset_angle := sin((_pulse_t * drift_frequency) + _drift_phase) * drift_variation
 	var desired_dir := current_dir.rotated(offset_angle * delta)
 	current_dir = current_dir.slerp(desired_dir, clampf(drift_response * delta, 0.0, 1.0)).normalized()
-	velocity = current_dir * speed
+	velocity = current_dir * effective_speed
 
 
 func _get_step_motion(delta: float) -> Vector2:
@@ -635,6 +762,108 @@ func _find_black_hole() -> Node2D:
 	return null
 
 
+## Her fizik tick'inde çakışan asteroidleri yarı yarıya iterek ayırır.
+## Her iki asteroid da kendi tarafını uygular → net ayrışma = tam overlap.
+func _apply_overlap_separation() -> void:
+	if _is_dying or _orbit_state == OrbitState.ORBITING:
+		return
+	for area in get_overlapping_areas():
+		if not is_instance_valid(area):
+			continue
+		if not area.is_in_group("asteroid"):
+			continue
+		if area == self:
+			continue
+		var r_var: Variant = area.get("radius")
+		if r_var == null:
+			continue
+		var other_r: float  = float(r_var)
+		var to_other: Vector2 = area.global_position - global_position
+		var dist: float       = to_other.length()
+		var min_dist: float   = radius + other_r
+		if dist >= min_dist - 0.05 or dist < 0.001:
+			continue
+		# Yarıya böl: her asteroid kendi tarafına çekilir
+		global_position -= (to_other / dist) * (min_dist - dist) * 0.5
+
+
+## Grup tabanlı asteroid çakışma çözümleme.
+## get_overlapping_areas() yerine grup taraması kullanır — .tscn collision layer
+## ayarlarından bağımsız çalışır.
+func _handle_asteroid_collisions() -> void:
+	if _is_dying or _orbit_state == OrbitState.ORBITING:
+		return
+	var tree := get_tree()
+	if tree == null:
+		return
+	for node in tree.get_nodes_in_group("asteroid"):
+		if node == self or not is_instance_valid(node):
+			continue
+		if node.get("_is_dying") == true:
+			continue
+		var os: Variant = node.get("_orbit_state")
+		if os != null and int(os) == OrbitState.ORBITING:
+			continue
+		var r2_var: Variant = node.get("radius")
+		if r2_var == null:
+			continue
+		var r2: float = float(r2_var)
+		var to_other: Vector2 = node.global_position - global_position
+		var dist: float = to_other.length()
+		var min_dist: float = radius + r2
+		if dist >= min_dist or dist < 0.001:
+			continue
+		# Pozisyon ayrıştırma — her asteroid kendi payını alır
+		var n: Vector2 = to_other / dist
+		var overlap: float = min_dist - dist
+		global_position -= n * overlap * 0.5
+		# Elastik çarpışma impulse — sadece küçük instance_id uygular (çift sayılmasın)
+		if get_instance_id() < node.get_instance_id():
+			var v2_var: Variant = node.get("velocity")
+			if v2_var == null:
+				continue
+			var v2: Vector2 = Vector2(v2_var)
+			var vn: float = (velocity - v2).dot(n)
+			if vn >= 0.0:
+				continue   # zaten birbirinden uzaklaşıyor
+			var m1: float = radius * radius
+			var m2: float = r2 * r2
+			const E: float = 0.80
+			var imp: float = -(1.0 + E) * vn / (1.0 / m1 + 1.0 / m2)
+			velocity = velocity - n * (imp / m1)
+			node.set("velocity", v2 + n * (imp / m2))
+
+
+## İki FREE asteroid arasında 2D elastik çarpışma (momentum + enerji korunumu).
+## Kütle ~ radius² (disk alanıyla orantılı).  Restitution = 0.82 (hafif inelastik).
+func _apply_elastic_collision(other: Area2D) -> void:
+	var v2_var: Variant = other.get("velocity")
+	if v2_var == null:
+		return
+	var v2: Vector2 = Vector2(v2_var)
+
+	var delta_p: Vector2 = other.global_position - global_position
+	var dist: float      = delta_p.length()
+	var n: Vector2
+	if dist < 0.001:
+		n = Vector2.RIGHT.rotated(randf() * TAU)  # dejenere durum
+	else:
+		n = delta_p / dist
+
+	var rel_vel: float = (velocity - v2).dot(n)
+	if rel_vel >= 0.0:
+		return   # zaten birbirinden uzaklaşıyor — müdahale etme
+
+	var r2: float    = float(other.get("radius")) if other.get("radius") != null else radius
+	var m1: float    = radius * radius
+	var m2: float    = r2 * r2
+	const E: float   = 0.82   # restitution katsayısı
+	var imp: float   = -(1.0 + E) * rel_vel / (1.0 / m1 + 1.0 / m2)
+
+	velocity = velocity - n * (imp / m1)
+	other.set("velocity", v2 + n * (imp / m2))
+
+
 func _find_player() -> Node2D:
 	var tree := get_tree()
 	if tree == null:
@@ -655,6 +884,16 @@ func _on_area_entered(area: Area2D) -> void:
 		return
 	if area == self:
 		return
+
+	# ── FREE ↔ FREE elastik çarpışma ────────────────────────────────────────
+	# Grabbed dahil — tüm serbest asteroidler birbirinden sekebilir.
+	# Çift işlemi önlemek için yalnızca küçük instance_id uygular.
+	if _orbit_state == OrbitState.FREE and area.is_in_group("asteroid"):
+		var os: Variant = area.get("_orbit_state")
+		if os != null and int(os) == OrbitState.FREE:
+			if get_instance_id() < area.get_instance_id():
+				_apply_elastic_collision(area)
+
 	if area.has_method("is_player_friendly") and bool(area.call("is_player_friendly")):
 		return
 	if _orbit_state == OrbitState.ORBITING:

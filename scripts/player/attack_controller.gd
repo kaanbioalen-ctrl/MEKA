@@ -113,6 +113,34 @@ func _get_cooldown(rs: Node) -> float:
 func _get_aim_direction() -> Vector2:
 	if _player == null:
 		return Vector2.RIGHT
+
+	# En yakın serbest asteroidi bul
+	var nearest: Node2D = null
+	var nearest_dist_sq: float = INF
+	var tree := get_tree()
+	if tree != null:
+		for body in tree.get_nodes_in_group("asteroid"):
+			if not is_instance_valid(body):
+				continue
+			var node := body as Node2D
+			if node == null:
+				continue
+			# Yakalanmış (ORBITING=1) veya ölmekte olan asteroidi atla
+			if body.get("_is_dying") == true:
+				continue
+			if int(body.get("orbit_state")) == 1:
+				continue
+			var d := _player.global_position.distance_squared_to(node.global_position)
+			if d < nearest_dist_sq:
+				nearest_dist_sq = d
+				nearest = node
+
+	if nearest != null:
+		var to_target := nearest.global_position - _player.global_position
+		if to_target.length_squared() > 1.0:
+			return to_target.normalized()
+
+	# Hedef yoksa mouse yönüne fallback
 	var to_mouse := get_global_mouse_position() - _player.global_position
 	if to_mouse.length_squared() < 1.0:
 		return Vector2.RIGHT

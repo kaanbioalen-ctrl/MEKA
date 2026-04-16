@@ -30,7 +30,7 @@ const SKILL_OFFSETS: Dictionary = {
 	# Ring 3 (r=420) — placeholder slots, equally spaced at 45° offset
 	"laser_duration":  Vector2(-297.0,  297.0),
 	"dual_laser":      Vector2(-297.0, -297.0),
-	"placeholder_d":   Vector2( 420.0,    0.0),
+	"laser_bounce":    Vector2( 420.0,    0.0),
 }
 
 const ORBIT_FLATTEN: float = 0.56
@@ -68,7 +68,7 @@ const ORBIT_LAYOUTS: Dictionary = {
 	"dual_laser": {
 		"radius": 420.0, "base_angle": -PI * 0.62, "speed": 0.34, "flatten": ORBIT_FLATTEN, "ring_key": "outer",
 	},
-	"placeholder_d": {
+	"laser_bounce": {
 		"radius": 420.0, "base_angle": 0.0, "speed": 0.34, "flatten": ORBIT_FLATTEN, "ring_key": "outer",
 	},
 }
@@ -112,6 +112,7 @@ const CONNECTIONS: Array = [
 	["energy_field", "crit_chance"],
 	["energy_field", "laser_duration"],
 	["energy_field", "dual_laser"],
+	["energy_field", "laser_bounce"],
 ]
 
 const BLACK_HOLE_CONNECTIONS: Array = [
@@ -193,10 +194,10 @@ const SKILL_CONFIGS: Dictionary = {
 		"skill_class": "COMBAT",
 		"buy_method": "buy_dual_laser_upgrade", "can_method": "can_buy_dual_laser_upgrade",
 	},
-	"placeholder_d": {
-		"label": "???", "short": "", "is_root": false, "large": false, "placeholder": true,
-		"skill_class": "DEFAULT",
-		"buy_method": "", "can_method": "",
+	"laser_bounce": {
+		"label": "Lazer\nSekme", "short": "LS", "is_root": false, "large": false,
+		"skill_class": "COMBAT",
+		"buy_method": "unlock_laser_bounce", "can_method": "can_unlock_laser_bounce",
 	},
 	"bh_core": {
 		"label": "KaraDelik\nCekirdegi", "short": "BH", "is_root": true, "large": true,
@@ -1001,13 +1002,22 @@ func _build_state(skill_id: String, rs: Node, um: Node) -> Dictionary:
 			var lvl: int    = int(rs.dual_laser_upgrade_level)
 			var max_l: int  = UpgradeDefinitions.MAX_DUAL_LASER_UPGRADE_LEVEL
 			var pre: bool   = bool(rs.attraction_skill_unlocked)
-			var laser_count: int = UpgradeEffects.get_simultaneous_cluster_laser_count(rs)
+			var chance_pct: int = roundi(UpgradeEffects.get_dual_laser_chance(rs) * 100.0)
 			st["locked"]      = not pre
 			st["level"]       = lvl
 			st["max_level"]   = max_l
 			st["can_buy"]     = pre and lvl < max_l and bool(um.call("can_buy_dual_laser_upgrade"))
 			st["cost_text"]   = _fmt_cost(um.call("get_upgrade_cost_info", lvl)) if (pre and lvl < max_l) else ""
-			st["status_text"] = _level_str(lvl, max_l, pre) + "\nEszamanli: %d" % laser_count
+			st["status_text"] = _level_str(lvl, max_l, pre) + "\nIhtimal: %%%d" % chance_pct
+		"laser_bounce":
+			var unlocked: bool = bool(rs.laser_bounce_unlocked)
+			var pre: bool      = bool(rs.attraction_skill_unlocked)
+			st["locked"]      = not pre
+			st["level"]       = 1 if unlocked else 0
+			st["max_level"]   = 1
+			st["can_buy"]     = pre and not unlocked and bool(um.call("can_unlock_laser_bounce"))
+			st["cost_text"]   = "8 Au + 1 Kr" if (pre and not unlocked) else ""
+			st["status_text"] = "ACILDI" if unlocked else ("8Au+1Kr" if pre else "Kilitli")
 	return st
 
 

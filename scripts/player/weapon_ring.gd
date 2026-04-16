@@ -130,8 +130,8 @@ func _draw_form(wtype: int, alpha: float) -> void:
 
 func _draw_laser_form(alpha: float) -> void:
 	var aim_angle := _aim_dir.angle()
-	var spike_col := Color(0.10, 0.92, 1.00, alpha * 0.9)
-	var glow_col  := Color(0.10, 0.92, 1.00, alpha * 0.12)
+	var spike_col := Color(0.48, 0.68, 1.00, alpha * 0.9)
+	var glow_col  := Color(0.48, 0.68, 1.00, alpha * 0.12)
 
 	# Glow layer
 	draw_arc(Vector2.ZERO, RING_RADIUS + 2.0, 0.0, TAU, 48, glow_col, 7.0, true)
@@ -230,7 +230,7 @@ func _draw_fire_flash() -> void:
 func _get_base_color() -> Color:
 	match _weapon_type:
 		WeaponType.LASER:
-			return Color(0.10, 0.92, 1.00, 0.85)
+			return Color(0.48, 0.68, 1.00, 0.85)
 		WeaponType.BULLET:
 			return Color(1.00, 0.82, 0.18, 0.85)
 		WeaponType.ROCKET:
@@ -242,7 +242,7 @@ func _get_base_color() -> Color:
 func _get_flash_color() -> Color:
 	match _weapon_type:
 		WeaponType.LASER:
-			return Color(0.10, 0.92, 1.00)
+			return Color(0.48, 0.68, 1.00)
 		WeaponType.BULLET:
 			return Color(1.00, 0.82, 0.18)
 		WeaponType.ROCKET:

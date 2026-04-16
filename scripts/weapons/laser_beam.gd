@@ -2,8 +2,7 @@ extends Node2D
 ## Lazer saldırısı — raycast tabanlı, sürekli hasar veren ışın.
 ## attack_controller tarafından sahneye eklenir; belirli bir süre sonra queue_free().
 
-const BEAM_MAX_LENGTH: float  = 650.0
-const BEAM_LIFETIME:   float  = 0.18   # saniye (attack_controller'ın cooldown'uyla eşleşir)
+const BEAM_LIFETIME:   float  = 0.09   # saniye (attack_controller'ın cooldown'uyla eşleşir)
 const DAMAGE_TICK_HZ:  float  = 30.0   # saniyede kaç hasar tick'i
 
 var _player:      Node2D = null
@@ -15,6 +14,7 @@ var _hit_point:   Vector2 = Vector2.ZERO
 var _hit_body:    Object  = null
 var _hit_valid:   bool    = false
 var _time:        float   = 0.0  # görsel animasyon
+var _beam_length: float   = 650.0  # her frame viewport'tan hesaplanır
 
 
 func setup(player: Node2D, initial_dir: Vector2, damage: float) -> void:
@@ -55,15 +55,27 @@ func _physics_process(delta: float) -> void:
 	queue_redraw()
 
 
+func _screen_half_diagonal() -> float:
+	var vp := get_viewport()
+	if vp == null:
+		return 650.0
+	var vp_size := vp.get_visible_rect().size
+	var scale   := vp.get_canvas_transform().get_scale()
+	var world_w := vp_size.x / maxf(scale.x, 0.001)
+	var world_h := vp_size.y / maxf(scale.y, 0.001)
+	return Vector2(world_w, world_h).length() * 0.5
+
+
 func _perform_raycast() -> void:
-	_hit_valid = false
-	_hit_body  = null
+	_hit_valid    = false
+	_hit_body     = null
+	_beam_length  = _screen_half_diagonal()
 	var space := get_world_2d().direct_space_state
 	if space == null:
 		return
 
-	var from := _player.global_position + _direction * 37.0
-	var to_pt := _player.global_position + _direction * BEAM_MAX_LENGTH
+	var from  := _player.global_position + _direction * 37.0
+	var to_pt := _player.global_position + _direction * _beam_length
 
 	var params := PhysicsRayQueryParameters2D.create(from, to_pt)
 	params.collision_mask = 0b0011   # layer 1 + 2 (asteroidler)
@@ -86,6 +98,12 @@ func _apply_damage() -> void:
 		return
 	if not is_instance_valid(_hit_body):
 		return
+	if _hit_body.has_method("is_player_friendly") and bool(_hit_body.call("is_player_friendly")):
+		return
+	if _hit_body.has_method("add_scorch_mark"):
+		var local_hit: Vector2 = _hit_body.to_local(_hit_point)
+		var local_dir: Vector2 = _direction.rotated(-_hit_body.global_rotation)
+		_hit_body.call("add_scorch_mark", local_hit, local_dir, randf_range(1.5, 3.2))
 	if _hit_body.has_method("take_mining_damage"):
 		_hit_body.take_mining_damage(_damage / DAMAGE_TICK_HZ)
 	elif _hit_body.has_method("take_damage"):
@@ -102,7 +120,7 @@ func _draw() -> void:
 	if _hit_valid:
 		end_local = _hit_point - global_position
 	else:
-		end_local = _direction * BEAM_MAX_LENGTH
+		end_local = _direction * _beam_length
 
 	var life_t  := 1.0 - (_elapsed / BEAM_LIFETIME)
 	var flicker := sin(_time * 45.0) * 0.12 + 0.88

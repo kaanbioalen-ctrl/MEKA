@@ -90,6 +90,9 @@ var _wrap_tween: Tween = null
 @onready var core_glow:         Node2D           = $VisualRoot/Core
 @onready var player_camera:     Camera2D         = $Camera2D
 
+const GRAB_RANGE:       float = 150.0
+const GRAB_HOLD_RADIUS: float = 80.0
+
 const DEATH_SHATTER_SCENE: PackedScene  = preload("res://scenes/effects/player_death_shatter.tscn")
 const OVERLOAD_BURST_SCENE: PackedScene = preload("res://scenes/effects/player_overload_burst.tscn")
 const _WAVE_EMITTER_SCRIPT              = preload("res://scripts/player/wave_damage_emitter.gd")
@@ -105,6 +108,7 @@ var _gravity_visual:     Node2D = null
 var _weapon_ring:        Node2D = null
 var _attack_controller:  Node2D = null
 var _cell_barrier:       Node2D = null
+var _grabbed_asteroid:   Node2D = null
 
 
 func _ready() -> void:
@@ -167,6 +171,7 @@ func _physics_process(delta: float) -> void:
 		if absf(move_delta.y) > _movement_bounds.size.y * 0.5:
 			move_delta.y -= signf(move_delta.y) * _movement_bounds.size.y
 	accumulated_position += move_delta
+	_update_grab(delta)
 	_curr_pos = global_position
 
 
@@ -347,6 +352,8 @@ func _is_harmful_asteroid(node: Node) -> bool:
 	if not node.is_in_group("asteroid"):
 		return false
 	if node.is_in_group("asteroid_uranium"):
+		return false
+	if node == _grabbed_asteroid:
 		return false
 	if node.has_method("is_player_friendly") and bool(node.call("is_player_friendly")):
 		return false
@@ -610,6 +617,59 @@ func _setup_weapon_ring() -> void:
 	# Attack controller'a ring referansını ver
 	if _attack_controller != null:
 		_attack_controller.set("_weapon_ring", _weapon_ring)
+
+
+# ── Yakalama ──────────────────────────────────────────────────────────────────
+
+func _unhandled_input(event: InputEvent) -> void:
+	if _is_dead:
+		return
+	if event is InputEventKey \
+			and (event as InputEventKey).keycode == KEY_E \
+			and event.pressed and not event.echo:
+		if _grabbed_asteroid != null:
+			_release_grab()
+		else:
+			_try_grab_nearest()
+
+
+func _try_grab_nearest() -> void:
+	var best: Node2D     = null
+	var best_dist: float = GRAB_RANGE
+	for node in get_tree().get_nodes_in_group("asteroid"):
+		if not is_instance_valid(node):
+			continue
+		if not node.has_method("set_grabbed"):
+			continue
+		var d: float = global_position.distance_to(node.global_position)
+		if d < best_dist:
+			best_dist = d
+			best      = node
+	if best == null:
+		return
+	_grabbed_asteroid = best
+	best.call("set_grabbed", true)
+	if _cell_barrier != null and _cell_barrier.has_method("set_grab_target"):
+		_cell_barrier.call("set_grab_target", best)
+
+
+func _release_grab() -> void:
+	if _grabbed_asteroid != null and is_instance_valid(_grabbed_asteroid):
+		_grabbed_asteroid.call("set_grabbed", false)
+	_grabbed_asteroid = null
+	if _cell_barrier != null and _cell_barrier.has_method("set_grab_target"):
+		_cell_barrier.call("set_grab_target", null)
+
+
+func _update_grab(delta: float) -> void:
+	if _grabbed_asteroid == null:
+		return
+	if not is_instance_valid(_grabbed_asteroid):
+		_grabbed_asteroid = null
+		if _cell_barrier != null and _cell_barrier.has_method("set_grab_target"):
+			_cell_barrier.call("set_grab_target", null)
+		return
+	_grabbed_asteroid.call("apply_grab_pull", global_position, GRAB_HOLD_RADIUS, delta)
 
 
 # ── Private: visual updates ────────────────────────────────────────────────────

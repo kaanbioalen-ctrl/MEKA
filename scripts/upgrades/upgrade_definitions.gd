@@ -47,7 +47,8 @@ const MAX_DAMAGE_AURA_UPGRADE_LEVEL: int = 3
 const MAX_ORBIT_MODE_UPGRADE_LEVEL: int = 5
 const MAX_CRIT_CHANCE_UPGRADE_LEVEL: int = 6
 const MAX_LASER_DURATION_UPGRADE_LEVEL: int = 6
-const MAX_DUAL_LASER_UPGRADE_LEVEL: int = 1
+const MAX_DUAL_LASER_UPGRADE_LEVEL: int = 6
+const DUAL_LASER_CHANCE_VALUES: Array[float] = [0.0, 0.10, 0.20, 0.30, 0.40, 0.50, 0.60]
 
 const ATTRACTION_SKILL_IRON_COST: int = 3
 const DROP_COLLECTION_SKILL_GOLD_COST: int = 3
@@ -58,9 +59,10 @@ const DEVELOPER_MODE_GOLD_REWARD: int = 100000
 const DEVELOPER_MODE_CRYSTAL_REWARD: int = 100000
 
 # ── Silah kilit maliyetleri ────────────────────────────────────────────────────
-const LASER_UNLOCK_COST:  Dictionary = {"iron": 15, "gold": 2,  "crystal": 0}
-const BULLET_UNLOCK_COST: Dictionary = {"iron": 20, "gold": 5,  "crystal": 0}
-const ROCKET_UNLOCK_COST: Dictionary = {"iron": 0,  "gold": 15, "crystal": 1}
+const LASER_UNLOCK_COST:        Dictionary = {"iron": 15, "gold": 2,  "crystal": 0}
+const LASER_BOUNCE_UNLOCK_COST: Dictionary = {"iron": 0,  "gold": 8,  "crystal": 1}
+const BULLET_UNLOCK_COST:       Dictionary = {"iron": 20, "gold": 5,  "crystal": 0}
+const ROCKET_UNLOCK_COST:       Dictionary = {"iron": 0,  "gold": 15, "crystal": 1}
 
 # ── Silah upgrade maliyetleri (level başına, 0–2) ──────────────────────────────
 const WEAPON_UPGRADE_COSTS: Array[Dictionary] = [

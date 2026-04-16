@@ -70,7 +70,7 @@ const PICKUP_FORCE_COLLECT_MULT: float = 0.72
 const PICKUP_SHAKE_DECAY: float = 5.2
 const PICKUP_SHAKE_MAX: float = 6.0
 
-@export var move_speed:             float = 60.0
+@export var move_speed:             float = 12.0
 @export var pull_strength:          float = 60.0   ## Düşük tutuldu — asteroid yığılması önlenir
 @export var pull_radius_mult:       float = 1.8
 @export var max_pull_speed:         float = 140.0  ## Asteroidler yavaş çekilsin
@@ -528,7 +528,14 @@ func _move(delta: float) -> void:
 
 # ─── Özel: Yerçekimi ─────────────────────────────────────────────────────────
 func _apply_gravity(delta: float) -> void:
-	var pull_zone     := _current_radius * pull_radius_mult
+	# Çekim alanı boyutla orantılı büyüsün:
+	# size_scale = mevcut_radius / başlangıç_radius  →  level 1'de 1.0, level 30'da ~22.0
+	# sqrt(size_scale) ile lineer olmayan bir büyüme sağlanır:
+	#   Level  1: pull_zone ≈  83px   (46 × 1.8 × 1.0)
+	#   Level 15: pull_zone ≈ 844px   (216 × 1.8 × 2.2)
+	#   Level 30: pull_zone ≈ 8540px  (1012 × 1.8 × 4.7)
+	var size_scale    := _current_radius / BASE_RADIUS
+	var pull_zone     := _current_radius * pull_radius_mult * sqrt(size_scale)
 	var event_horizon := _current_radius * 0.40  ## Görsel olay ufkuyla aynı
 
 	for ast in get_tree().get_nodes_in_group("asteroid"):
@@ -549,20 +556,14 @@ func _apply_gravity(delta: float) -> void:
 		if dist > pull_zone:
 			continue
 
-		# Doğru imza: target_pos, field_radius, pull_strength, min_pull,
-		#             max_pull_speed, velocity_blend, side_damping,
-		#             commit_distance, delta
-		if ast.has_method("apply_storm_pull"):
-			ast.call("apply_storm_pull",
-				global_position,   ## target_pos
-				pull_zone,         ## field_radius
-				pull_strength,     ## pull_strength
-				5.0,               ## storm_min_pull
-				max_pull_speed,    ## storm_max_pull_speed
-				velocity_blend,    ## storm_velocity_blend
-				1.0,               ## storm_side_damping
-				0.0,               ## storm_commit_distance
-				delta              ## delta
+		if ast.has_method("apply_black_hole_pull"):
+			ast.call("apply_black_hole_pull",
+				global_position,  ## bh_pos
+				_current_radius,  ## bh_radius
+				pull_zone,        ## pull_zone
+				pull_strength,    ## pull_strength
+				max_pull_speed,   ## max_pull_speed
+				delta             ## delta
 			)
 
 # ─── Özel: Görsel Katmanlar ──────────────────────────────────────────────────

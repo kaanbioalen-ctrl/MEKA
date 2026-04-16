@@ -160,7 +160,9 @@ func _description(id: String) -> String:
 		"laser_duration":
 			return "Silia lazerinin aktif kalma suresini uzatir. Her seviyede lazer vurus zamani %10 artar."
 		"dual_laser":
-			return "Silia sisteminin ayni anda iki ayri kume lazeri olusturmasini saglar."
+			return "Silia kumesi lazer atarken farkli bir hucre duvarindan da ayni anda lazer olusabilir. Her seviyede ihtimal %10 artar."
+		"laser_bounce":
+			return "Silia lazeri ayni anda ekrandaki ikinci bir asteroide de sekip vurur. Her iki hedefe tam hasar verilir."
 		"energy_orb_magnet":
 			return "Enerji orb cekim mesafesini her seviyede 1.5 kat buyutur."
 		"bh_core":
@@ -194,7 +196,9 @@ func _effect_text(id: String, level: int) -> String:
 		"laser_duration":
 			return "Lazer sure bonusu: +%d%%" % int(level * 10)
 		"dual_laser":
-			return "Eszamanli lazer sayisi: %d" % (1 + level)
+			return "Ikinci lazer ihtimali: %%%d" % (level * 10)
+		"laser_bounce":
+			return "Durum: %s" % ("AKTIF" if level >= 1 else "Kilitli")
 		"energy_orb_magnet":
 			return "Orb cekim carpani: x%.1f" % pow(1.5, float(level))
 		"bh_gravity_well":

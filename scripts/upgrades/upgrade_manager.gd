@@ -557,6 +557,29 @@ func unlock_laser_weapon() -> bool:
 	return true
 
 
+func can_unlock_laser_bounce() -> bool:
+	var run_state := get_run_state()
+	if run_state == null:
+		return false
+	if not _has_attraction_prerequisite():
+		return false
+	if bool(run_state.laser_bounce_unlocked):
+		return false
+	return _can_pay_specific_cost(UpgradeDefinitions.LASER_BOUNCE_UNLOCK_COST)
+
+
+func unlock_laser_bounce() -> bool:
+	var run_state := get_run_state()
+	if run_state == null:
+		return false
+	if not can_unlock_laser_bounce():
+		return false
+	if not _pay_specific_cost(UpgradeDefinitions.LASER_BOUNCE_UNLOCK_COST):
+		return false
+	run_state.laser_bounce_unlocked = true
+	return true
+
+
 func can_unlock_bullet_weapon() -> bool:
 	var run_state := get_run_state()
 	if run_state == null:

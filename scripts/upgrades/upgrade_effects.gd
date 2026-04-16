@@ -145,14 +145,21 @@ static func get_laser_duration_multiplier(run_state: Node) -> float:
 	return 1.0 + float(get_laser_duration_upgrade_level(run_state)) * 0.10
 
 
+static func is_laser_bounce_unlocked(run_state: Node) -> bool:
+	if run_state == null:
+		return false
+	return bool(run_state.laser_bounce_unlocked)
+
+
 static func get_dual_laser_upgrade_level(run_state: Node) -> int:
 	if run_state == null:
 		return 0
 	return clampi(int(run_state.dual_laser_upgrade_level), 0, UpgradeDefinitions.MAX_DUAL_LASER_UPGRADE_LEVEL)
 
 
-static func get_simultaneous_cluster_laser_count(run_state: Node) -> int:
-	return 1 + get_dual_laser_upgrade_level(run_state)
+static func get_dual_laser_chance(run_state: Node) -> float:
+	var lvl := get_dual_laser_upgrade_level(run_state)
+	return float(UpgradeDefinitions.DUAL_LASER_CHANCE_VALUES[lvl])
 
 
 # ── Seken mermi getter'ları ────────────────────────────────────────────────────

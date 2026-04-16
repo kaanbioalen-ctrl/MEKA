@@ -44,6 +44,7 @@ var rocket_unlocked: bool = false
 var laser_upgrade_level: int = 0
 var laser_duration_upgrade_level: int = 0
 var dual_laser_upgrade_level: int = 0
+var laser_bounce_unlocked: bool = false
 var bullet_bounce_upgrade_level: int = 0
 var bullet_damage_upgrade_level: int = 0
 var rocket_upgrade_level: int = 0
@@ -95,6 +96,7 @@ func reset_run() -> void:
 	laser_upgrade_level = 0
 	laser_duration_upgrade_level = 0
 	dual_laser_upgrade_level = 0
+	laser_bounce_unlocked = false
 	bullet_bounce_upgrade_level = 0
 	bullet_damage_upgrade_level = 0
 	rocket_upgrade_level = 0
