@@ -545,6 +545,16 @@ Cost 1 | 1 asteroid"
 horizontal_alignment = 1
 vertical_alignment = 1
 
+[node name="PauseScreen" type="CanvasLayer" parent="." unique_id=2024000001]
+layer = 15
+process_mode = 3
+visible = false
+
+[node name="OcakScreen" type="CanvasLayer" parent="." unique_id=2024000002]
+layer = 16
+process_mode = 3
+visible = false
+
 [connection signal="pressed" from="DeathScreen/CenterPanel/VBox/RetryButton" to="." method="_on_retry_button_pressed"]
 [connection signal="pressed" from="DeathScreen/CenterPanel/VBox/UpgradeButton" to="." method="_on_upgrade_button_pressed"]
 [connection signal="pressed" from="DeathScreen/CenterPanel/VBox/QuitButton" to="." method="_on_death_screen_quit_pressed"]

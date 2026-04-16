@@ -6,9 +6,10 @@ signal new_game_pressed
 signal settings_pressed
 signal quit_pressed
 
-const HEADER_SCRIPT = preload("res://scripts/ui/main_menu_header_visual.gd")
-const BG_SCRIPT     = preload("res://scripts/ui/main_menu_bg.gd")
-const BORDER_SCRIPT = preload("res://scripts/ui/main_menu_border_glow.gd")
+const HEADER_SCRIPT      = preload("res://scripts/ui/main_menu_header_visual.gd")
+const BG_SCRIPT          = preload("res://scripts/ui/main_menu_bg.gd")
+const BORDER_SCRIPT      = preload("res://scripts/ui/main_menu_border_glow.gd")
+const PARTICLES_BG_SCRIPT = preload("res://scripts/ui/menu_particles_bg.gd")
 
 const PANEL_W : float = 440.0
 const PANEL_H : float = 580.0
@@ -159,6 +160,17 @@ func _load_save_data() -> void:
 # ── UI İnşası ─────────────────────────────────────────────────────────────────
 
 func _build_ui(canvas: Node) -> void:
+	# Oyunu tamamen örten solid arka plan — en alt katman
+	var solid := ColorRect.new()
+	solid.set_anchors_preset(Control.PRESET_FULL_RECT)
+	solid.color = Color(0.00, 0.00, 0.04, 1.0)
+	solid.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	canvas.add_child(solid)
+
+	# Parçacık arka planı — yıldız sahasının altında
+	var particles := PARTICLES_BG_SCRIPT.new()
+	canvas.add_child(particles)
+
 	# Arka plan — yıldız sahası
 	var bg := BG_SCRIPT.new()
 	canvas.add_child(bg)

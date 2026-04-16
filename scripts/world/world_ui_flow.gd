@@ -7,26 +7,36 @@ enum RunFlowState {
 	GAME_OVER,
 	UPGRADE,
 	RESTARTING,
+	PAUSED,
+	OCAK,
 }
 
 var death_screen: CanvasLayer = null
 var upgrade_screen: CanvasLayer = null
 var main_menu: CanvasLayer = null
 var hud: CanvasLayer = null
+var pause_screen: CanvasLayer = null
+var ocak_screen: CanvasLayer = null
 
 var flow_state: int = RunFlowState.RUNNING
 var game_over_triggered: bool = false
 
 
-func setup(next_death_screen: CanvasLayer, next_upgrade_screen: CanvasLayer, next_main_menu: CanvasLayer, next_hud: CanvasLayer) -> void:
+func setup(next_death_screen: CanvasLayer, next_upgrade_screen: CanvasLayer, next_main_menu: CanvasLayer, next_hud: CanvasLayer, next_pause_screen: CanvasLayer = null, next_ocak_screen: CanvasLayer = null) -> void:
 	death_screen = next_death_screen
 	upgrade_screen = next_upgrade_screen
 	main_menu = next_main_menu
 	hud = next_hud
+	pause_screen = next_pause_screen
+	ocak_screen = next_ocak_screen
 
 
 func reset_runtime_state() -> void:
 	game_over_triggered = false
+	if pause_screen != null:
+		pause_screen.visible = false
+	if ocak_screen != null:
+		ocak_screen.visible = false
 	flow_state = RunFlowState.RUNNING
 
 
@@ -76,6 +86,10 @@ func hide_all_overlay_ui() -> void:
 	set_main_menu_visible(false)
 	set_upgrade_screen_visible(false)
 	set_death_screen_visible(false)
+	if pause_screen != null:
+		pause_screen.visible = false
+	if ocak_screen != null:
+		ocak_screen.visible = false
 	if hud != null:
 		hud.visible = true
 
@@ -151,9 +165,65 @@ func handle_upgrade_close_requested(restart_in_progress: bool) -> void:
 	close_upgrade_overlay()
 
 
+func is_paused() -> bool:
+	return flow_state == RunFlowState.PAUSED
+
+
+func can_pause() -> bool:
+	return flow_state == RunFlowState.RUNNING
+
+
+func open_pause(tree: SceneTree) -> void:
+	if not can_pause():
+		return
+	flow_state = RunFlowState.PAUSED
+	if pause_screen != null:
+		pause_screen.visible = true
+	if tree != null:
+		tree.paused = true
+
+
+func close_pause(tree: SceneTree) -> void:
+	if flow_state != RunFlowState.PAUSED:
+		return
+	flow_state = RunFlowState.RUNNING
+	if pause_screen != null:
+		pause_screen.visible = false
+	if tree != null:
+		tree.paused = false
+
+
 func can_toggle_upgrade_with_keyboard(restart_in_progress: bool, player_exists: bool) -> bool:
 	if flow_state == RunFlowState.MENU:
+		return false
+	if flow_state == RunFlowState.PAUSED:
+		return false
+	if flow_state == RunFlowState.OCAK:
 		return false
 	if restart_in_progress or game_over_triggered or is_death_screen_visible():
 		return false
 	return player_exists
+
+
+func is_ocak() -> bool:
+	return flow_state == RunFlowState.OCAK
+
+
+func open_ocak() -> void:
+	if flow_state != RunFlowState.PAUSED:
+		return
+	flow_state = RunFlowState.OCAK
+	if pause_screen != null:
+		pause_screen.visible = false
+	if ocak_screen != null:
+		ocak_screen.visible = true
+
+
+func close_ocak() -> void:
+	if flow_state != RunFlowState.OCAK:
+		return
+	flow_state = RunFlowState.PAUSED
+	if ocak_screen != null:
+		ocak_screen.visible = false
+	if pause_screen != null:
+		pause_screen.visible = true

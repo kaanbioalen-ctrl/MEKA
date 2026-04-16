@@ -9,7 +9,8 @@ signal quit_pressed
 
 # ── Sabitler ───────────────────────────────────────────────────────────────────
 
-const HEADER_SCRIPT   = preload("res://scripts/ui/death_header_visual.gd")
+const HEADER_SCRIPT      = preload("res://scripts/ui/death_header_visual.gd")
+const PARTICLES_BG_SCRIPT = preload("res://scripts/ui/menu_particles_bg.gd")
 
 const COL_IRON    := Color(0.54, 0.63, 0.73)
 const COL_GOLD    := Color(1.00, 0.82, 0.40)
@@ -72,6 +73,17 @@ func set_buttons_disabled(disabled: bool) -> void:
 # ── UI İnşası ─────────────────────────────────────────────────────────────────
 
 func _build_ui(canvas: Node) -> void:
+	# Oyunu tamamen örten solid arka plan — en alt katman
+	var solid := ColorRect.new()
+	solid.set_anchors_preset(Control.PRESET_FULL_RECT)
+	solid.color = Color(0.00, 0.00, 0.04, 1.0)
+	solid.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	canvas.add_child(solid)
+
+	# ── Parçacık arka planı — en alt katman ──
+	var particles := PARTICLES_BG_SCRIPT.new()
+	canvas.add_child(particles)
+
 	# ── Arka plan ──
 	_overlay = ColorRect.new()
 	_overlay.set_anchors_preset(Control.PRESET_FULL_RECT)

@@ -4,6 +4,8 @@ const WorldUIFlow        = preload("res://scripts/world/world_ui_flow.gd")
 const PORTAL_SCENE      := preload("res://scenes/world/portal.tscn")
 const DEATH_SCREEN_SCRIPT    = preload("res://scripts/ui/death_screen.gd")
 const MAIN_MENU_SCRIPT       = preload("res://scripts/ui/main_menu_screen.gd")
+const PAUSE_SCREEN_SCRIPT    = preload("res://scripts/ui/pause_screen.gd")
+const OCAK_SCREEN_SCRIPT     = preload("res://scripts/ui/ocak_screen.gd")
 const WORLD_ONE_SCENE := "res://scenes/world/world.tscn"
 const WORLD_TWO_SCENE   := "res://scenes/world/world2.tscn"
 const WORLD_THREE_SCENE := "res://scenes/world/world3.tscn"
@@ -23,6 +25,8 @@ const WORLD_TWO_GATE_WORLD_MARGIN: float = 260.0
 @onready var death_screen: CanvasLayer = $DeathScreen
 @onready var upgrade_screen: CanvasLayer = $UpgradeScreen
 @onready var main_menu: CanvasLayer = $MainMenu
+@onready var pause_screen: CanvasLayer = $PauseScreen
+@onready var ocak_screen: CanvasLayer = $OcakScreen
 
 const EnemyDirectorScript = preload("res://scripts/enemies/enemy_director.gd")
 
@@ -35,13 +39,17 @@ var _portal_relocate_timer: float = 0.0
 var _portal_first_relocation_done: bool = false
 var _death_screen_ctrl: Node = null
 var _main_menu_ctrl   : Node = null
+var _pause_screen_ctrl: Node = null
+var _ocak_screen_ctrl : Node = null
 
 
 func _ready() -> void:
 	_restart_in_progress = false
 	_setup_death_screen_ctrl()
 	_setup_main_menu_ctrl()
-	_ui_flow.setup(death_screen, upgrade_screen, main_menu, hud)
+	_setup_pause_screen_ctrl()
+	_setup_ocak_screen_ctrl()
+	_ui_flow.setup(death_screen, upgrade_screen, main_menu, hud, pause_screen, ocak_screen)
 	_reset_runtime_state()
 	var viewport_size := get_viewport_rect().size
 	zone_manager.rebuild(viewport_size)
@@ -132,6 +140,18 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	if _ui_flow.is_menu():
 		return
+
+	# ESC — pause / ocak aç/kapat
+	if event.keycode == KEY_ESCAPE:
+		if _ui_flow.is_ocak():
+			_on_ocak_close_pressed()
+		elif _ui_flow.is_paused():
+			_close_pause()
+		elif _ui_flow.can_pause():
+			_open_pause()
+		get_viewport().set_input_as_handled()
+		return
+
 	if event.keycode != KEY_K:
 		return
 	if not _can_toggle_upgrade_with_keyboard():
@@ -369,6 +389,22 @@ func _setup_main_menu_ctrl() -> void:
 	_main_menu_ctrl.new_game_pressed.connect(_on_main_menu_new_game_pressed)
 	_main_menu_ctrl.settings_pressed.connect(_on_main_menu_settings_pressed)
 	_main_menu_ctrl.quit_pressed.connect(_on_main_menu_quit_pressed)
+
+
+func _setup_pause_screen_ctrl() -> void:
+	pause_screen.process_mode = Node.PROCESS_MODE_ALWAYS
+	_pause_screen_ctrl = PAUSE_SCREEN_SCRIPT.new()
+	pause_screen.add_child(_pause_screen_ctrl)
+	_pause_screen_ctrl.resume_pressed.connect(_on_pause_resume_pressed)
+	_pause_screen_ctrl.main_menu_pressed.connect(_on_pause_main_menu_pressed)
+	_pause_screen_ctrl.ocak_pressed.connect(_on_pause_ocak_pressed)
+
+
+func _setup_ocak_screen_ctrl() -> void:
+	ocak_screen.process_mode = Node.PROCESS_MODE_ALWAYS
+	_ocak_screen_ctrl = OCAK_SCREEN_SCRIPT.new()
+	ocak_screen.add_child(_ocak_screen_ctrl)
+	_ocak_screen_ctrl.close_pressed.connect(_on_ocak_close_pressed)
 
 
 func _setup_death_screen_ctrl() -> void:
@@ -639,3 +675,54 @@ func _close_main_menu() -> void:
 	var run_state := get_node_or_null("/root/RunState")
 	if run_state != null:
 		run_state.active = true
+
+
+func _open_pause() -> void:
+	_ui_flow.open_pause(get_tree())
+	if _pause_screen_ctrl != null:
+		_pause_screen_ctrl.call("show_menu")
+
+
+func _close_pause() -> void:
+	_ui_flow.close_pause(get_tree())
+	if _pause_screen_ctrl != null:
+		_pause_screen_ctrl.call("hide_menu")
+
+
+func _on_pause_resume_pressed() -> void:
+	_close_pause()
+
+
+func _on_pause_ocak_pressed() -> void:
+	_ui_flow.open_ocak()
+	if _ocak_screen_ctrl != null:
+		_ocak_screen_ctrl.call("show_screen")
+
+
+func _on_ocak_close_pressed() -> void:
+	_ui_flow.close_ocak()
+	if _ocak_screen_ctrl != null:
+		_ocak_screen_ctrl.call("hide_screen")
+	if _pause_screen_ctrl != null:
+		_pause_screen_ctrl.call("show_menu")
+
+
+func _on_pause_main_menu_pressed() -> void:
+	_try_save_progress()
+	# Pause'u kapat, sahneyi yeniden yükle — auto_load_save=false olduğu için
+	# _ready() else branch'ına girer ve ana menüyü açar.
+	_ui_flow.close_pause(get_tree())
+	if _pause_screen_ctrl != null:
+		_pause_screen_ctrl.call("hide_menu")
+	_restart_in_progress = true
+	_ui_flow.flow_state = WorldUIFlow.RunFlowState.RESTARTING
+	_ui_flow.game_over_triggered = false
+	_reset_tree_runtime_state()
+	_hide_all_overlay_ui()
+	set_process_input(false)
+	set_process_unhandled_input(false)
+	var run_state := get_node_or_null("/root/RunState")
+	if run_state != null:
+		run_state.auto_load_save = false
+		run_state.coming_from_portal = false
+	call_deferred("_perform_scene_reload")
