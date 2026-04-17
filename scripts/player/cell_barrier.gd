@@ -251,26 +251,55 @@ func _update_clusters(delta: float) -> void:
 	_clusters = _clusters.filter(func(c): return c["timer"] < total)
 
 
+func _get_screen_world_rect() -> Rect2:
+	var viewport := get_viewport()
+	if viewport == null:
+		return Rect2(-1e9, -1e9, 2e9, 2e9)
+	var camera := viewport.get_camera_2d()
+	if camera == null:
+		return Rect2(-1e9, -1e9, 2e9, 2e9)
+	var screen_size := viewport.get_visible_rect().size
+	var zoom        := camera.zoom
+	var half_w      := screen_size.x * 0.5 / zoom.x
+	var half_h      := screen_size.y * 0.5 / zoom.y
+	var cam_pos     := camera.global_position
+	return Rect2(cam_pos.x - half_w, cam_pos.y - half_h, half_w * 2.0, half_h * 2.0)
+
+
 func _spawn_cluster() -> bool:
-	# En yakın düşman asteroide bak — grabbed/orbit/launched atlanır
-	var best_angle: float = randf() * TAU   # asteroid yoksa rastgele
-	var best_dist:  float = INF
+	# Ekranda görünen asteroidleri bul
+	var world_rect := _get_screen_world_rect()
+	var screen_asteroids: Array = []
 	for node in get_tree().get_nodes_in_group("asteroid"):
 		if not is_instance_valid(node):
 			continue
 		if node.has_method("is_player_friendly") and bool(node.call("is_player_friendly")):
 			continue
-		var d: float = node.global_position.distance_to(global_position)
+		if world_rect.has_point((node as Node2D).global_position):
+			screen_asteroids.append(node)
+
+	# Ekranda asteroid yoksa lazer oluşturma
+	if screen_asteroids.is_empty():
+		return false
+
+	# En yakın ekran asteroidini hedef al — node referansını sakla
+	var best_angle: float = 0.0
+	var best_dist:  float = INF
+	var best_node:  Node2D = null
+	for node in screen_asteroids:
+		var d: float = (node as Node2D).global_position.distance_to(global_position)
 		if d < best_dist:
 			best_dist  = d
-			best_angle = (node.global_position - global_position).angle()
+			best_angle = ((node as Node2D).global_position - global_position).angle()
+			best_node  = node as Node2D
+
 	_last_spawn_angle = best_angle
-	return _spawn_cluster_at_angle(best_angle)
+	return _spawn_cluster_at_angle(best_angle, best_node)
 
 
 # Verilen açıya en yakın spine grubunda küme oluştur.
 # Çift küme ihtimali için de kullanılır — görsel tamamen aynıdır.
-func _spawn_cluster_at_angle(target_angle: float) -> bool:
+func _spawn_cluster_at_angle(target_angle: float, target_node: Node2D = null) -> bool:
 	var size: int = randi_range(CLUSTER_SIZE_MIN, CLUSTER_SIZE_MAX)
 
 	# target_angle'a en yakın spine indeksini bul
@@ -282,6 +311,7 @@ func _spawn_cluster_at_angle(target_angle: float) -> bool:
 			best_diff = diff
 			best_idx  = i
 	# Grubu merkeze al: merkez idx → start = merkez - size/2
+	@warning_ignore("integer_division")
 	var start: int    = (best_idx - size / 2 + SPINE_COUNT) % SPINE_COUNT
 	var attempts: int = 0
 
@@ -297,6 +327,7 @@ func _spawn_cluster_at_angle(target_angle: float) -> bool:
 	if attempts >= 20:
 		return false
 
+	@warning_ignore("integer_division")
 	var center_idx: int     = (start + size / 2) % SPINE_COUNT
 	var center_angle: float = _spine_angle[center_idx]
 	var max_len: float      = 0.0
@@ -310,19 +341,22 @@ func _spawn_cluster_at_angle(target_angle: float) -> bool:
 		var idx: int = (start + j) % SPINE_COUNT
 		indices.append(idx)
 		_spine_cluster_conv[idx] = conv_pt
-	_clusters.append({ "indices": indices, "timer": 0.0, "fired": false })
+	_clusters.append({ "indices": indices, "timer": 0.0, "fired": false, "target": target_node })
 	return true
 
 
 func _fire_cluster_laser(c: Dictionary) -> void:
 	var conv_local: Vector2 = _spine_cluster_conv[c["indices"][0]]
-	# Üçgenin apex noktası: conv_local'dan dışa doğru tri_h * 0.6 kadar ileri
-	# tri_h = 6.5 * cl_t=1 → 6.5, apex offset = outward * 6.5 * 0.6 = outward * 3.9
 	var apex_local: Vector2 = conv_local + conv_local.normalized() * 3.9
-	_spawn_cluster_laser_from_local(apex_local)
+	# Variant üzerinden al — typed atama freed instance hatası fırlatır
+	var tgt_var = c.get("target")
+	var tgt: Node2D = null
+	if tgt_var != null and is_instance_valid(tgt_var):
+		tgt = tgt_var as Node2D
+	_spawn_cluster_laser_from_local(apex_local, tgt)
 
 
-func _spawn_cluster_laser_from_local(apex_local: Vector2) -> void:
+func _spawn_cluster_laser_from_local(apex_local: Vector2, target_node: Node2D = null) -> void:
 	var scene_root := get_tree().current_scene
 	if scene_root == null:
 		return
@@ -331,7 +365,7 @@ func _spawn_cluster_laser_from_local(apex_local: Vector2) -> void:
 	var laser := _CLUSTER_LASER_SCRIPT.new()
 	laser.name = "ClusterLaser"
 	scene_root.add_child(laser)
-	laser.setup(self, apex_local)
+	laser.setup(self, apex_local, target_node)
 
 
 # ── Grab ─────────────────────────────────────────────────────────────────────

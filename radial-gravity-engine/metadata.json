@@ -1,0 +1,6 @@
+{
+  "name": "Radial Gravity Engine",
+  "description": "A radial layered deterministic grid with gravity-driven flow, pattern collapse mechanics, and a central absorption core.",
+  "requestFramePermissions": [],
+  "majorCapabilities": []
+}

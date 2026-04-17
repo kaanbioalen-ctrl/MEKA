@@ -196,28 +196,18 @@ func _spawn_energy_orbs() -> void:
 	if parent == null:
 		parent = tree.root
 
-	var player_node := _find_player()
+	var collector := _find_drop_collector()
 
-	# Gold orbs: random count [energy_drop_count .. energy_drop_count+2]
-	var gold_count := randi_range(energy_drop_count, energy_drop_count + 2)
-	for _i in range(gold_count):
-		var orb := energy_orb_scene.instantiate()
-		if orb == null:
-			continue
+	# Sadece 1 altın drop — rastgele yönde saçılır
+	var total_gold := maxi(1, energy_drop_count) * maxi(1, orb_value)
+	var orb := energy_orb_scene.instantiate()
+	if orb != null:
+		if "_scatter_angle_override" in orb:
+			orb._scatter_angle_override = randf() * TAU
 		if orb is Node2D:
 			(orb as Node2D).global_position = global_position
 		parent.add_child(orb)
 		if orb.has_method("setup"):
-			orb.call("setup", player_node, radius, &"gold")
-
-	# Energy orbs: same as iron map 1 (energy_orb_drop_count × multiplier)
-	var energy_count := energy_orb_drop_count * ENERGY_ORB_DROP_MULTIPLIER
-	for _i in range(energy_count):
-		var orb := energy_orb_scene.instantiate()
-		if orb == null:
-			continue
-		if orb is Node2D:
-			(orb as Node2D).global_position = global_position
-		parent.add_child(orb)
-		if orb.has_method("setup"):
-			orb.call("setup", player_node, radius, &"energy")
+			orb.call("setup", collector, radius, &"gold")
+		if "gold_value" in orb:
+			orb.gold_value = total_gold

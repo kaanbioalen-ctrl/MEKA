@@ -18,10 +18,10 @@ const LIFETIME:             float = 20.0
 @export_range(1, 100, 1) var titanium_value: int = 1
 
 @export_group("Spawn")
-@export var scatter_duration:    float = 0.18
-@export var scatter_impulse_min: float = 70.0
-@export var scatter_impulse_max: float = 160.0
-@export var scatter_drag:        float = 6.0   # lerp-toward-zero rate during scatter
+@export var scatter_duration:    float = 0.55
+@export var scatter_impulse_min: float = 180.0
+@export var scatter_impulse_max: float = 340.0
+@export var scatter_drag:        float = 3.2   # lerp-toward-zero rate during scatter
 
 @export_group("Attraction")
 @export var attract_radius: float = 140.0
@@ -44,6 +44,15 @@ const URANIUM_PICKUP_RADIUS: float = 2.8
 const TITANIUM_PICKUP_RADIUS: float = 2.6
 const ENERGY_MIN_PICKUP_RADIUS: float = 3.0
 
+# Drop texture yolları
+const IRON_ORE_TEX_PATH: String = "res://assets/asteroids/iron/iron_ore_drop.png"
+const GOLD_ORE_TEX_PATH: String = "res://assets/asteroids/gold/gold_ore_drop.png"
+
+var _iron_ore_tex: Texture2D = null
+var _gold_ore_tex: Texture2D = null
+var _source_radius: float = 0.0   # spawn eden asteroidin yarıçapı
+var _scatter_angle_override: float = -1.0   # >= 0 ise bu açı kullanılır
+
 # ── Internal state ─────────────────────────────────────────────────────────────
 var _phase:         Phase   = Phase.SCATTER
 var _player:        Node2D  = null
@@ -57,9 +66,13 @@ var _resource_kind: StringName = &"energy"
 var _spawn_scatter_radius: float = 0.0
 var _lifetime:      float   = LIFETIME
 
+# Pre-computed fallback polygon for iron ore (avoids randf in _draw)
+var _fallback_iron_pts: PackedVector2Array = PackedVector2Array()
+
 # ── Visual state ───────────────────────────────────────────────────────────────
 var _draw_scale: float = 1.0
 var _absorb_t:   float = 0.0
+var _time:       float = 0.0
 
 @onready var collision_shape: CollisionShape2D = $CollisionShape2D
 
@@ -74,7 +87,8 @@ func _ready() -> void:
 	_orbit_sign    = 1.0 if randf() < 0.5 else -1.0
 	_apply_collision_radius()
 
-	var angle   := randf() * TAU
+	var angle   := _scatter_angle_override if _scatter_angle_override >= 0.0 else randf() * TAU
+	angle += randf_range(-0.22, 0.22)   # küçük sapma — robotik görünmemesi için
 	var impulse := randf_range(scatter_impulse_min, scatter_impulse_max)
 	_velocity = Vector2.RIGHT.rotated(angle) * impulse
 
@@ -83,6 +97,7 @@ func _ready() -> void:
 
 
 func _physics_process(delta: float) -> void:
+	_time += delta
 	if _phase != Phase.ABSORB:
 		_lifetime -= delta
 		if _lifetime <= 0.0:
@@ -181,9 +196,12 @@ func _begin_collect() -> void:
 	if _phase == Phase.ABSORB:
 		return
 	_phase      = Phase.ABSORB
-	set_deferred("monitoring",  false)
-	set_deferred("monitorable", false)
-	_give_resource(_player)
+	monitoring  = false
+	monitorable = false
+	if is_instance_valid(_player):
+		_give_resource(_player)
+	else:
+		push_warning("EnergyOrb: _begin_collect called but _player is null/invalid.")
 	_absorb_t   = 0.0
 	_draw_scale = 0.55
 	queue_redraw()
@@ -227,6 +245,14 @@ func _give_resource(p: Node2D) -> void:
 func _on_body_entered(body: Node2D) -> void:
 	if _phase == Phase.ABSORB or _phase == Phase.SCATTER:
 		return
+	if _grace_timer > 0.0:
+		return
+	if not is_instance_valid(body):
+		return
+	if not is_instance_valid(_player):
+		var resolved := _resolve_player(body)
+		if resolved != null and is_instance_valid(resolved):
+			_player = resolved
 	if _matches_collect_target(body):
 		_begin_collect()
 
@@ -234,28 +260,49 @@ func _on_body_entered(body: Node2D) -> void:
 func _on_area_entered(area: Area2D) -> void:
 	if _phase == Phase.ABSORB or _phase == Phase.SCATTER:
 		return
+	if _grace_timer > 0.0:
+		return
+	if not is_instance_valid(area):
+		return
+	if not is_instance_valid(_player):
+		var resolved := _resolve_player(area)
+		if resolved != null and is_instance_valid(resolved):
+			_player = resolved
 	if _matches_collect_target(area):
 		_begin_collect()
 
 
 func _matches_collect_target(n: Node) -> bool:
+	if not is_instance_valid(n):
+		return false
 	if is_instance_valid(_player):
 		var cur: Node = n
 		var hops := 0
 		while cur != null and hops < 8:
+			if not is_instance_valid(cur):
+				break
 			if cur == _player:
 				return true
 			cur = cur.get_parent()
 			hops += 1
-	return _resolve_player(n) != null
+	var resolved := _resolve_player(n)
+	if resolved != null and is_instance_valid(resolved):
+		_player = resolved
+		return true
+	return false
 
 
 func _resolve_player(n: Node) -> Node2D:
 	var cur: Node = n
 	var hops := 0
 	while cur != null and hops < 8:
+		if not is_instance_valid(cur):
+			break
 		if cur.is_in_group(player_group):
-			return cur as Node2D
+			var as2d := cur as Node2D
+			if as2d != null and is_instance_valid(as2d):
+				return as2d
+			break
 		cur = cur.get_parent()
 		hops += 1
 	return null
@@ -266,10 +313,22 @@ func _resolve_player(n: Node) -> Node2D:
 func setup(player_node: Node2D, source_radius: float = 0.0, resource_kind: StringName = &"energy") -> void:
 	_player        = player_node
 	_resource_kind = resource_kind
+	_source_radius = source_radius
 	_apply_resource_visual_size()
 	if source_radius > 0.0:
 		_spawn_scatter_radius = source_radius * 2.0
 		attract_radius = maxf(attract_radius, source_radius * 4.0)
+	if resource_kind == &"iron":
+		if _iron_ore_tex == null:
+			_iron_ore_tex = load(IRON_ORE_TEX_PATH) as Texture2D
+		_fallback_iron_pts.clear()
+		for i in 8:
+			var a := float(i) / 8.0 * TAU + 0.2
+			var r_ratio := randf_range(0.78, 1.0) if i % 2 == 0 else 0.88
+			_fallback_iron_pts.append(Vector2(cos(a) * r_ratio, sin(a) * r_ratio))
+	elif resource_kind == &"gold":
+		if _gold_ore_tex == null:
+			_gold_ore_tex = load(GOLD_ORE_TEX_PATH) as Texture2D
 	_apply_collision_radius()
 	_apply_spawn_scatter()
 
@@ -304,10 +363,10 @@ func _draw() -> void:
 	var proximity_glow := _get_player_proximity_glow()
 	var white_mix := proximity_glow * proximity_glow
 	if _resource_kind == &"iron":
-		_draw_energy_orb(s, proximity_glow, true)
+		_draw_iron_ore(s, proximity_glow)
 		return
 	if _resource_kind == &"gold":
-		_draw_gold_pentagon(s, proximity_glow)
+		_draw_gold_ore(s, proximity_glow)
 		return
 	if _resource_kind == &"titanium":
 		_draw_titanium_hex(s, proximity_glow)
@@ -370,7 +429,7 @@ func _maybe_refresh_player(delta: float) -> void:
 func _refresh_player(force: bool) -> void:
 	var node  := get_tree().get_first_node_in_group(player_group)
 	var as_2d := node as Node2D
-	if as_2d != null:
+	if as_2d != null and is_instance_valid(as_2d):
 		_player = as_2d
 	elif force:
 		_player = null
@@ -414,6 +473,56 @@ func _apply_spawn_scatter() -> void:
 	var angle    := randf() * TAU
 	var distance := randf_range(0.0, _spawn_scatter_radius)
 	global_position += Vector2.RIGHT.rotated(angle) * distance
+
+
+func _draw_iron_ore(scale_factor: float, proximity_glow: float) -> void:
+	var visual_r := (_source_radius / 3.0 if _source_radius > 2.0 else pickup_radius * 6.0) * scale_factor * 1.5
+	var half     := visual_r
+
+	if _iron_ore_tex != null:
+		# Çok ince nefes — %1.5 oynuyor, göze batmaz
+		var pulse := 1.0 + sin(_time * 2.4) * 0.015
+		var h     := half * pulse
+		# Uzaktayken hafif soğuk demir tonu; yaklaşınca ılık metalik kıvılcım
+		var cold  := Color(0.82, 0.83, 0.88, 1.0)   # durgun demir
+		var warm  := Color(1.0,  0.93, 0.80, 1.0)   # yakın — sıcak vurgu
+		var t     := proximity_glow * proximity_glow * 0.6   # çok parlamaması için fren
+		var tint  := cold.lerp(warm, t)
+		var rect  := Rect2(Vector2(-h, -h), Vector2(h * 2.0, h * 2.0))
+		draw_texture_rect(_iron_ore_tex, rect, false, tint)
+	elif _fallback_iron_pts.size() == 8:
+		var pts := PackedVector2Array()
+		for p in _fallback_iron_pts:
+			pts.append(p * half)
+		draw_colored_polygon(pts, Color(0.22, 0.22, 0.26, 0.95))
+		pts.append(pts[0])
+		draw_polyline(pts, Color(0.45, 0.46, 0.52, 0.70), 0.6, true)
+
+
+func _draw_gold_ore(scale_factor: float, proximity_glow: float) -> void:
+	var visual_r := (_source_radius / 3.0 if _source_radius > 2.0 else pickup_radius * 6.0) * scale_factor * 1.5
+	var half     := visual_r
+
+	if _gold_ore_tex != null:
+		var pulse := 1.0 + sin(_time * 2.1) * 0.015
+		var h     := half * pulse
+		# Durgun altın sıcaklığı; yaklaşınca parlak sarı-beyaz
+		var cold  := Color(0.95, 0.88, 0.55, 1.0)   # mat altın
+		var warm  := Color(1.0,  0.97, 0.78, 1.0)   # yakın — parlak vurgu
+		var t     := proximity_glow * proximity_glow * 0.6
+		var tint  := cold.lerp(warm, t)
+		var rect  := Rect2(Vector2(-h, -h), Vector2(h * 2.0, h * 2.0))
+		draw_texture_rect(_gold_ore_tex, rect, false, tint)
+	else:
+		# Texture yoksa altın sarısı pentagon fallback
+		var radius := half
+		var pts    := PackedVector2Array()
+		for i in range(5):
+			var a := (-PI * 0.5) + (TAU * float(i) / 5.0)
+			pts.append(Vector2.RIGHT.rotated(a) * radius)
+		draw_colored_polygon(pts, Color(1.0, 0.84, 0.12, 1.0))
+		draw_polyline(pts + PackedVector2Array([pts[0]]),
+			Color(1.0, 0.96, 0.62, 0.80), 0.8, true)
 
 
 func _draw_iron_square(scale_factor: float, proximity_glow: float) -> void:

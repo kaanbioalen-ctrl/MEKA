@@ -392,6 +392,8 @@ func _setup_main_menu_ctrl() -> void:
 
 
 func _setup_pause_screen_ctrl() -> void:
+	if pause_screen == null:
+		return
 	pause_screen.process_mode = Node.PROCESS_MODE_ALWAYS
 	_pause_screen_ctrl = PAUSE_SCREEN_SCRIPT.new()
 	pause_screen.add_child(_pause_screen_ctrl)
@@ -401,6 +403,8 @@ func _setup_pause_screen_ctrl() -> void:
 
 
 func _setup_ocak_screen_ctrl() -> void:
+	if ocak_screen == null:
+		return
 	ocak_screen.process_mode = Node.PROCESS_MODE_ALWAYS
 	_ocak_screen_ctrl = OCAK_SCREEN_SCRIPT.new()
 	ocak_screen.add_child(_ocak_screen_ctrl)
@@ -408,6 +412,8 @@ func _setup_ocak_screen_ctrl() -> void:
 
 
 func _setup_death_screen_ctrl() -> void:
+	if death_screen == null:
+		return
 	death_screen.process_mode = Node.PROCESS_MODE_ALWAYS
 	_death_screen_ctrl = DEATH_SCREEN_SCRIPT.new()
 	death_screen.add_child(_death_screen_ctrl)

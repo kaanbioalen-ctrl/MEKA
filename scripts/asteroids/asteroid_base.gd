@@ -715,12 +715,39 @@ func _spawn_energy_orbs() -> void:
 	if parent == null:
 		parent = tree.root
 
-	var total_drop_count := maxi(energy_drop_count, 0) * ENERGY_ORB_DROP_MULTIPLIER
 	var collector := _find_drop_collector()
-	for _i in range(total_drop_count):
+
+	# Demir ve altın: her zaman 1 drop, rastgele yönde saçılır
+	if orb_resource_kind == &"iron" or orb_resource_kind == &"gold":
+		var total_value := maxi(1, energy_drop_count) * maxi(1, orb_value)
+		var orb := energy_orb_scene.instantiate()
+		if orb != null:
+			if "_scatter_angle_override" in orb:
+				orb._scatter_angle_override = randf() * TAU
+			if orb is Node2D:
+				(orb as Node2D).global_position = global_position
+			parent.add_child(orb)
+			if orb.has_method("setup"):
+				orb.call("setup", collector, radius, orb_resource_kind)
+			if orb_resource_kind == &"iron" and "iron_value" in orb:
+				orb.iron_value = total_value
+			elif orb_resource_kind == &"gold" and "gold_value" in orb:
+				orb.gold_value = total_value
+		return
+
+	# Diğer kaynaklar: eşit açı aralıklarıyla dört bir yana saçılır
+	var total_drop_count := maxi(energy_drop_count, 0) * ENERGY_ORB_DROP_MULTIPLIER
+	if total_drop_count <= 0:
+		return
+	var base_angle := randf() * TAU   # ilk açı rastgele — her seferinde farklı
+	var angle_step := TAU / float(total_drop_count)
+	for i in range(total_drop_count):
 		var orb := energy_orb_scene.instantiate()
 		if orb == null:
 			continue
+		var spread_angle := base_angle + angle_step * float(i)
+		if "_scatter_angle_override" in orb:
+			orb._scatter_angle_override = spread_angle
 		if orb is Node2D:
 			(orb as Node2D).global_position = global_position
 		parent.add_child(orb)
@@ -728,9 +755,6 @@ func _spawn_energy_orbs() -> void:
 			orb.call("setup", collector, radius, orb_resource_kind)
 		if orb_value > 1:
 			match orb_resource_kind:
-				&"iron":
-					if "iron_value" in orb:
-						orb.iron_value = orb_value
 				&"gold", &"crystal", &"uranium":
 					if "gold_value" in orb:
 						orb.gold_value = orb_value

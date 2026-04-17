@@ -85,7 +85,7 @@ var _flow_r:      PackedFloat32Array
 var _flow_lat:    PackedFloat32Array
 
 
-func setup(barrier: Node2D, conv_local: Vector2) -> void:
+func setup(barrier: Node2D, conv_local: Vector2, target_node: Node2D = null) -> void:
 	_barrier     = barrier
 	global_position = Vector2.ZERO
 	_origin_dir  = conv_local.normalized()
@@ -114,8 +114,13 @@ func setup(barrier: Node2D, conv_local: Vector2) -> void:
 		_flow_r[i]      = rng.randf_range(FLOW_R_MIN, FLOW_R_MAX)
 		_flow_lat[i]    = rng.randf_range(-P_SPREAD * 0.5, P_SPREAD * 0.5)
 
+	# _origin_dir: barrier üzerindeki sabit spawn yönü — asla değiştirilmez
 	var origin: Vector2 = barrier.global_position + _origin_dir * _origin_dist
-	_target = _find_best_target(origin)
+	if target_node != null and is_instance_valid(target_node):
+		# Hedef doğrudan verildi — arama yapma, doğrudan kilitle
+		_target = target_node
+	else:
+		_target = _find_best_target(origin)
 
 
 func _setup_fire_sfx() -> void:
@@ -189,7 +194,8 @@ func _process(delta: float) -> void:
 
 	_origin_w = _barrier.to_global(_origin_dir * _origin_dist)
 
-	if _target == null or not is_instance_valid(_target) or not _in_cone(_target):
+	# Hedef ekrandan çıktı veya geçersizleşti — yenisini bul
+	if _target == null or not is_instance_valid(_target) or not _is_on_screen(_target.global_position):
 		_target = _find_best_target(_origin_w)
 		if _target == null:
 			queue_free()
@@ -197,6 +203,8 @@ func _process(delta: float) -> void:
 
 	var to_tgt:  Vector2 = _target.global_position - _origin_w
 	var tgt_dir: Vector2 = to_tgt.normalized()
+	# _origin_dir sabit kalır — beam _end_w üzerinden zaten hedefe doğru gider
+
 	var surf_r:  float   = float(_target.get("radius")) if _target.get("radius") != null else 20.0
 	_beam_len = maxf(0.0, to_tgt.length() - surf_r)
 	_end_w    = _origin_w + tgt_dir * _beam_len
@@ -206,7 +214,7 @@ func _process(delta: float) -> void:
 	var rs := get_node_or_null("/root/RunState")
 	if UpgradeEffects.is_laser_bounce_unlocked(rs):
 		if _target2 == null or not is_instance_valid(_target2) or _target2 == _target \
-				or not _in_cone(_target2) or not _is_on_screen(_target2.global_position):
+				or not _is_on_screen(_target2.global_position):
 			_target2 = _find_second_target(_origin_w, _target)
 		if _target2 != null and is_instance_valid(_target2):
 			var to_tgt2:  Vector2 = _target2.global_position - _origin_w
@@ -327,14 +335,13 @@ func _is_on_screen(world_pos: Vector2) -> bool:
 
 
 func _find_best_target(from: Vector2) -> Node2D:
+	# Koni kısıtı yok — ekrandaki en yakın düşman asteroidi hedef al
 	var best_dist: float = INF
 	var best: Node2D = null
 	for node in get_tree().get_nodes_in_group("asteroid"):
 		if not is_instance_valid(node): continue
 		if node.has_method("is_player_friendly") and bool(node.call("is_player_friendly")): continue
 		if not _is_on_screen(node.global_position): continue
-		var dir: Vector2 = (node.global_position - from).normalized()
-		if _origin_dir.dot(dir) <= 0.0: continue
 		var d: float = node.global_position.distance_to(from)
 		if d < best_dist:
 			best_dist = d
@@ -343,6 +350,7 @@ func _find_best_target(from: Vector2) -> Node2D:
 
 
 func _find_second_target(from: Vector2, exclude: Node2D) -> Node2D:
+	# Koni kısıtı yok — ekrandaki en yakın ikinci asteroidi hedef al
 	var best_dist: float = INF
 	var best: Node2D = null
 	for node in get_tree().get_nodes_in_group("asteroid"):
@@ -350,8 +358,6 @@ func _find_second_target(from: Vector2, exclude: Node2D) -> Node2D:
 		if node == exclude: continue
 		if node.has_method("is_player_friendly") and bool(node.call("is_player_friendly")): continue
 		if not _is_on_screen(node.global_position): continue
-		var dir: Vector2 = (node.global_position - from).normalized()
-		if _origin_dir.dot(dir) <= 0.0: continue
 		var d: float = node.global_position.distance_to(from)
 		if d < best_dist:
 			best_dist = d

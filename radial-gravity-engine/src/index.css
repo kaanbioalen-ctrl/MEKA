@@ -1,0 +1,85 @@
+@import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap');
+
+@theme {
+  --font-mono: "Courier New", Courier, monospace, ui-monospace;
+  --font-sans: "Helvetica Neue", Arial, sans-serif;
+}
+
+:root {
+  --bg-color: #0c0d10;
+  --accent: #00ff9d;
+  --danger: #ff4d4d;
+  --border: #2a2d35;
+  --text-main: #e0e0e0;
+  --text-dim: #6b7280;
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: var(--bg-color);
+  color: var(--text-main);
+  margin: 0;
+  overflow: hidden;
+}
+
+@keyframes dash {
+  to {
+    stroke-dashoffset: -20;
+  }
+}
+
+.stroke-dash-2 {
+  animation: dash 5s linear infinite;
+}
+
+.panel {
+  border: 1px solid var(--border);
+  background: rgba(12, 13, 16, 0.8);
+  backdrop-filter: blur(10px);
+}
+
+.panel-header {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  color: var(--accent);
+  border-bottom: 1px solid var(--border);
+}
+
+.stat-label {
+  color: var(--text-dim);
+  text-transform: uppercase;
+  font-size: 10px;
+}
+
+.stat-value {
+  font-family: var(--font-mono);
+  font-weight: bold;
+}
+
+.sink-node {
+  fill: #000;
+  stroke: var(--accent);
+  stroke-width: 2;
+  filter: drop-shadow(0 0 10px rgba(0, 255, 157, 0.3));
+}
+
+.cell {
+  fill: rgba(42, 45, 53, 0.2);
+  stroke: var(--border);
+  stroke-width: 1;
+}
+
+.grid-line {
+  stroke: var(--border);
+  stroke-width: 1;
+  fill: none;
+}
+
+.marker-tag {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  fill: var(--text-dim);
+}
